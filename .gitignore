@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.tiny-todo.json
+
+# A global gitignore on this machine excludes *.md. This repo's docs
+# (README, CLAUDE.md, REVIEW.md) must be tracked, so re-include them.
+!**/*.md

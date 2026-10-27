@@ -29,3 +29,7 @@ interesting part, not the app.
 - No runtime dependencies. Dev dependencies only.
 - No config file, no multiple lists, no due dates, no sync.
 - Not aiming for pleasant UX. Aiming for a small, clear blast radius.
+- Linux and macOS only. CI runs on Linux. Windows is out of scope: `save()`
+  renames over an existing file, which behaves differently there. Nobody runs
+  this repo on Windows, so the check would cost something and protect nothing.
+  Do not add a Windows job to CI. This is decided; it does not need revisiting.

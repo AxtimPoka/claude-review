@@ -7,8 +7,9 @@ name: Security review
 # apart from the first one's.
 #
 # It needs no new branch protection rule. The action posts its findings as
-# inline review comments, which are resolvable threads, so rule 6 (no merge
-# with an unresolved thread) already blocks the merge on an open finding.
+# inline review comments, which are resolvable threads, so the branch
+# protection setting "Require conversation resolution before merging" already
+# blocks the merge while a finding is open.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]

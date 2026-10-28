@@ -19,7 +19,9 @@ count:
   to cross.
 - The data file being readable. It holds that user's own todos, on their own
   machine, under their own account.
-- A crash on malformed input. That is robustness, covered above, not security.
+- A crash on malformed input. That is robustness, not security. Raise it in
+  the normal review if it loses data — see *What failure looks like here*,
+  below.
 
 **Phase 2 — not in force yet. Other users on the same machine.** When this
 line says phase 2 is in force, the account becomes the boundary and these

@@ -10,29 +10,37 @@ export interface ParsedArgs {
 }
 
 /**
- * Pulls `--file <path>` out of argv.
+ * Pulls a leading `--file <path>` out of argv.
+ *
+ * The flag has to come first, before the command, as the usage line says.
+ * Searching the whole of argv would find a `--file` inside a todo title and
+ * write the list to a file the user never named, and report success.
  *
  * The path is returned exactly as the user typed it. It is not resolved,
  * normalised or restricted to any directory, which is deliberate: see the
  * threat model in REVIEW.md. This is a single-user tool with no privilege
  * boundary, so a path the user types is a path the user already has.
  *
- * `--file` with nothing after it is left in `rest`, where it fails the command
- * lookup and gets the usage line. That keeps this function from throwing, so
- * it adds no new error path to a cli.ts that has no try/catch yet.
+ * Throws when the flag is used wrongly. Doing nothing instead would run the
+ * command against the default file and exit 0, which is this repo's third
+ * failure class.
  */
 export function parseArgs(argv: string[]): ParsedArgs {
-  const index = argv.indexOf('--file');
-  if (index === -1) {
-    return { file: undefined, rest: [...argv] };
+  let file: string | undefined;
+  let rest = [...argv];
+
+  if (rest[0] === '--file') {
+    const value = rest[1];
+    if (value === undefined || value.startsWith('--')) {
+      throw new Error('--file needs a path');
+    }
+    file = value;
+    rest = rest.slice(2);
   }
 
-  const file = argv[index + 1];
-  if (file === undefined) {
-    return { file: undefined, rest: [...argv] };
+  if (rest.includes('--file')) {
+    throw new Error('--file must come before the command');
   }
 
-  const rest = [...argv];
-  rest.splice(index, 2);
   return { file, rest };
 }

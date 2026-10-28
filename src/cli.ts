@@ -35,4 +35,12 @@ function main(argv: string[]): number {
   }
 }
 
-process.exitCode = main(process.argv.slice(2));
+// CLAUDE.md: the library throws, and this file turns the error into an exit
+// code. Without this, a bad argument or a corrupt data file reaches the user as
+// a stack trace.
+try {
+  process.exitCode = main(process.argv.slice(2));
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+}

@@ -9,28 +9,37 @@ describe('parseArgs', () => {
     });
   });
 
-  it('takes the path and removes both tokens', () => {
+  it('takes a leading path and removes both tokens', () => {
     expect(parseArgs(['--file', 'other.json', 'list'])).toEqual({
       file: 'other.json',
       rest: ['list'],
     });
   });
 
-  it('finds the flag after the command too', () => {
-    expect(parseArgs(['add', 'buy milk', '--file', 'other.json'])).toEqual({
-      file: 'other.json',
-      rest: ['add', 'buy milk'],
-    });
+  it('throws when --file comes after the command, instead of using the default file', () => {
+    expect(() => parseArgs(['list', '--file'])).toThrow('must come before');
+    expect(() => parseArgs(['list', '--file', 'other.json'])).toThrow('must come before');
   });
 
-  it('leaves --file in place when nothing follows it, so the CLI prints usage', () => {
-    expect(parseArgs(['list', '--file'])).toEqual({
-      file: undefined,
-      rest: ['list', '--file'],
-    });
+  // The case that writes to a file nobody named: without the leading-only rule,
+  // this parsed 'flag' as the data file and saved the todo 'document the in
+  // README' there, then exited 0.
+  it('throws rather than reading --file out of a todo title', () => {
+    expect(() => parseArgs(['add', 'document the --file flag in README'])).not.toThrow();
+    expect(() => parseArgs(['add', 'document', 'the', '--file', 'flag'])).toThrow(
+      'must come before',
+    );
   });
 
-  it('does not copy the caller array', () => {
+  it('throws when --file has no path', () => {
+    expect(() => parseArgs(['--file'])).toThrow('needs a path');
+  });
+
+  it('throws when the path after --file is another flag', () => {
+    expect(() => parseArgs(['--file', '--file', 'other.json'])).toThrow('needs a path');
+  });
+
+  it('does not mutate the caller array', () => {
     const argv = ['--file', 'other.json', 'list'];
 
     parseArgs(argv);

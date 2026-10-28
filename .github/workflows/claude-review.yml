@@ -92,10 +92,11 @@ jobs:
               the commit under review, say so in your summary and review the
               commit, not the working tree.
 
-          # --allowedTools ADDS to the defaults, it does not replace them. The
-          # reviewer reported on #7 that it was still offered Edit and Write,
-          # and that read-only Bash ran, while `npm` needed approval — which
-          # fits: npm is not in the defaults, cat and git diff are. So the
+          # --allowedTools ADDS to the defaults, it does not replace them.
+          # On #7 the reviewer reported that it was still offered Edit and
+          # Write and that read-only Bash ran; on earlier runs, on #5, it had
+          # reported that `npm` needed approval. Both hold only if the list
+          # adds: npm is not in the defaults, cat and git diff are. So the
           # prompt's no-edit rule was a request with nothing behind it.
           #
           # This removes the edit path. It does not make the checkout

@@ -114,8 +114,20 @@ say in your finding which invariant was broken.
 ### `src/storage.ts` must replace the data file, never rewrite it in place
 
 `save()` writes to a temporary file and then `renameSync`s it over the target.
-The temp file must sit in the same directory as the target: a rename across
-filesystems is not atomic, and the guarantee is gone.
+The temp file must sit in the same directory as the target, for two separate
+reasons:
+
+- **Across filesystems the rename does not happen at all.** `rename(2)` returns
+  `EXDEV` and Node does not fall back to a copy, so every save fails and an
+  existing data file is left byte for byte as it was. Measured against a
+  pre-existing data file on a second filesystem: `rename FAILED: EXDEV`, and
+  the file's contents were unchanged afterwards. So this one is loud and loses
+  nothing. **A half-written data file would be worse** — it is failure #1 above
+  — and it is the thing a cross-filesystem rename cannot produce. Do not go
+  looking for it here.
+- **Outside that directory the temp name is not private.** A guessable name in
+  a directory other accounts can write lets another local user pre-place that
+  path. See the threat model above for when that counts.
 
 Reject a diff that:
 

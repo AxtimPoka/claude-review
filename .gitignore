@@ -5,3 +5,9 @@ dist/
 # A global gitignore on this machine excludes *.md. This repo's docs
 # (README, CLAUDE.md, REVIEW.md) must be tracked, so re-include them.
 !**/*.md
+
+# Local credentials. Never committed: GitHub push protection caught this
+# once already, on a `git add -A`.
+.env
+.env.*
+!.env.example

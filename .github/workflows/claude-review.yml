@@ -92,5 +92,18 @@ jobs:
               the commit under review, say so in your summary and review the
               commit, not the working tree.
 
+          # --allowedTools ADDS to the defaults, it does not replace them. The
+          # reviewer reported on #7 that it was still offered Edit and Write,
+          # and that read-only Bash ran, while `npm` needed approval — which
+          # fits: npm is not in the defaults, cat and git diff are. So the
+          # prompt's no-edit rule was a request with nothing behind it.
+          #
+          # This removes the edit path. It does not make the checkout
+          # read-only: Bash can still write, `sed -i` for one. And the cause
+          # of the CLAUDE.md edit on #5 was never established — the job log
+          # shows no tool calls — so this closes the likeliest route, not a
+          # known one. If a checkout drifts again after this, the cause was
+          # something else, and we will know that much.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*)"
+            --disallowedTools "Edit,Write,MultiEdit,NotebookEdit"

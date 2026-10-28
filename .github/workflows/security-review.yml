@@ -76,9 +76,12 @@ jobs:
           #
           # The action warns that re-analysing the same code can repeat a
           # finding. It is right, and it has no equivalent of the AI review's
-          # read-the-existing-threads step, so duplicates here are real. The
-          # article's written priority settles it: catch real bugs first, cut
-          # review rounds second.
+          # read-the-existing-threads step, so duplicates here are real.
+          #
+          # What settles it is the priority the article writes down: catch real
+          # bugs first, cut review rounds second. Repeated findings cost
+          # rounds; an unscanned commit costs a bug.
+          # https://claude.dev/blog/solving-code-review-at-anthropic/
           run-every-commit: true
 
           comment-pr: true

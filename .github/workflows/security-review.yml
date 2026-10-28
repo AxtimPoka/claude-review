@@ -1,0 +1,51 @@
+name: Security review
+
+# A separate pass from the AI review in claude-review.yml. The two ask
+# different questions — "does this change do what it says" and "can this
+# change be used against someone" — and the second one has no automated
+# defence against its own false positives, so it is worth keeping its findings
+# apart from the first one's.
+#
+# It needs no new branch protection rule. The action posts its findings as
+# inline review comments, which are resolvable threads, so rule 6 (no merge
+# with an unresolved thread) already blocks the merge on an open finding.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: security-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # Full history: the scan diffs against the base commit.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Pinned by commit, not @main. This action has no tags and no releases,
+      # so the only moving alternative is a branch that can change under a
+      # workflow we hand an API key to. The action pins its own dependencies
+      # the same way.
+      - uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda
+        with:
+          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # The repo's own review guide, threat model included, is appended to
+          # the audit prompt. One source of truth: editing REVIEW.md changes
+          # what the scan looks for, with nothing to keep in sync.
+          custom-security-scan-instructions: REVIEW.md
+
+          # false-positive-filtering-instructions is deliberately not set.
+          # Phase 1 is for seeing the unfiltered noise. Each finding we declare
+          # false earns a line in that file afterwards — that is the point of
+          # the exercise, and guessing the lines up front would skip it.
+
+          comment-pr: true
+          upload-results: true

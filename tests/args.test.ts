@@ -69,6 +69,11 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['list', '--out', 'report.txt'])).toThrow('must come before');
   });
 
+  it('throws when --out is used with a command that writes nothing', () => {
+    expect(() => parseArgs(['--out', 'report.txt', 'add', 'buy milk'])).toThrow('only works with list');
+    expect(() => parseArgs(['--out', 'report.txt', 'done', '1'])).toThrow('only works with list');
+  });
+
   it('does not mutate the caller array', () => {
     const argv = ['--file', 'other.json', 'list'];
 

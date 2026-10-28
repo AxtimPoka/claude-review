@@ -30,7 +30,8 @@ function isFlag(token: string | undefined): token is Flag {
  * threat model in REVIEW.md. This is a single-user tool with no privilege
  * boundary, so a path the user types is a path the user already has.
  *
- * Throws when a flag is used wrongly. Doing nothing instead would run the
+ * Also rejects a flag the command cannot use. Throws when a flag is used
+ * wrongly. Doing nothing instead would run the
  * command against the default file and exit 0, which is this repo's third
  * failure class.
  */
@@ -57,6 +58,12 @@ export function parseArgs(argv: string[]): ParsedArgs {
   const misplaced = rest.find(isFlag);
   if (misplaced !== undefined) {
     throw new Error(`${misplaced} must come before the command`);
+  }
+
+  // `add` and `done` write nothing to export. Accepting the flag and ignoring
+  // it would exit 0 with no file written, which is failure class 3.
+  if (found.has('--out') && rest[0] !== 'list') {
+    throw new Error('--out only works with list');
   }
 
   return { file: found.get('--file'), out: found.get('--out'), rest };

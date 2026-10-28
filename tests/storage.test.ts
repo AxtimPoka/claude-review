@@ -84,6 +84,16 @@ describe('storage', () => {
     expect(readFileSync(target, 'utf8')).toBe('1. [ ] buy milk\n');
   });
 
+  it('refuses to write the export over the data file', () => {
+    save([{ title: 'buy milk', done: false }]);
+
+    expect(() => exportText(dataFile, 'rendered text\n')).toThrow('over the data file');
+    expect(() => exportText(join(directory, 'sub', '..', 'todos.json'), 'x\n')).toThrow(
+      'over the data file',
+    );
+    expect(load()).toEqual([{ title: 'buy milk', done: false }]);
+  });
+
   // This does NOT prove the write was atomic: a save() that writes the target
   // directly passes it too, because it never creates a temp file at all. It
   // only catches an atomic save() that forgets to clean up. Atomicity itself

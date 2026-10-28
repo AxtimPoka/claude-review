@@ -10,6 +10,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
+# Reading the existing threads only prevents a duplicate if the runs are
+# ordered. Two pushes in quick succession would otherwise start two runs that
+# both read the thread list before either has posted. This queues them per
+# pull request. cancel-in-progress would instead throw away the first run's
+# findings, which is the opposite of what this job is for.
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -41,7 +50,7 @@ jobs:
             last run. So before you read the diff, list the inline comments
             that are already on this pull request:
 
-                gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments
+                gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments --paginate
 
             Do not open a new thread for a finding that is already there,
             whether or not that thread is resolved. A duplicate thread blocks

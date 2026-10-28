@@ -1,4 +1,11 @@
-import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { resolve } from 'node:path';
 import type { Todo } from './todo.js';
 
@@ -52,8 +59,24 @@ export function save(todos: Todo[]): void {
  * file is worth the temp-file-and-rename dance.
  */
 export function exportText(path: string, text: string): void {
-  if (resolve(path) === resolve(dataFile())) {
+  const target = dataFile();
+
+  // Comparing resolved strings catches the obvious spelling and nothing else.
+  // It misses a case variant on a case-insensitive filesystem — APFS, the
+  // macOS default, and macOS is a supported platform — and it misses a symlink
+  // or a hardlink to the data file. So ask the filesystem which file it is.
+  // statSync follows symlinks, and a hardlink shares the inode, so one check
+  // covers all three.
+  if (resolve(path) === resolve(target)) {
     throw new Error('refusing to write the export over the data file');
   }
+  if (existsSync(path) && existsSync(target)) {
+    const candidate = statSync(path);
+    const data = statSync(target);
+    if (candidate.dev === data.dev && candidate.ino === data.ino) {
+      throw new Error('refusing to write the export over the data file');
+    }
+  }
+
   writeFileSync(path, text, 'utf8');
 }

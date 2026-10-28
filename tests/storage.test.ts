@@ -1,4 +1,13 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  linkSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -91,6 +100,24 @@ describe('storage', () => {
     expect(() => exportText(join(directory, 'sub', '..', 'todos.json'), 'x\n')).toThrow(
       'over the data file',
     );
+    expect(load()).toEqual([{ title: 'buy milk', done: false }]);
+  });
+
+  it('refuses a symlink that points at the data file', () => {
+    save([{ title: 'buy milk', done: false }]);
+    const link = join(directory, 'link.json');
+    symlinkSync(dataFile, link);
+
+    expect(() => exportText(link, 'rendered text\n')).toThrow('over the data file');
+    expect(load()).toEqual([{ title: 'buy milk', done: false }]);
+  });
+
+  it('refuses a hardlink to the data file', () => {
+    save([{ title: 'buy milk', done: false }]);
+    const link = join(directory, 'hard.json');
+    linkSync(dataFile, link);
+
+    expect(() => exportText(link, 'rendered text\n')).toThrow('over the data file');
     expect(load()).toEqual([{ title: 'buy milk', done: false }]);
   });
 

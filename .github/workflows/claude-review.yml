@@ -85,6 +85,12 @@ jobs:
               files do not already cover, propose the exact line to add.
             - If nothing is Important, say so in one line. Do not pad the
               review to look thorough.
+            - Do not edit, create or delete any file. You are reviewing a diff,
+              and a file you changed is no longer the diff the author wrote. If
+              you find yourself wanting to try a change, describe it in the
+              finding instead. If you notice the checkout already differs from
+              the commit under review, say so in your summary and review the
+              commit, not the working tree.
 
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*)"

@@ -67,5 +67,19 @@ jobs:
           # false earns a line in that file afterwards — that is the point of
           # the exercise, and guessing the lines up front would skip it.
 
+          # The action caches per pull request and skips a re-run by default.
+          # On #5 that meant the second push — the one that fixed two silent
+          # failures — was never scanned at all: a later commit could add
+          # anything and this gate would not see it. A scan that reads only
+          # the first commit cannot produce a finding to block the merge on,
+          # so it is not a gate.
+          #
+          # The action warns that re-analysing the same code can repeat a
+          # finding. It is right, and it has no equivalent of the AI review's
+          # read-the-existing-threads step, so duplicates here are real. The
+          # article's written priority settles it: catch real bugs first, cut
+          # review rounds second.
+          run-every-commit: true
+
           comment-pr: true
           upload-results: true

@@ -1,9 +1,15 @@
+import { parseArgs } from './args.js';
 import { addTodo, completeTodo } from './todo.js';
 import { renderList } from './render.js';
 import { load, save } from './storage.js';
 
 function main(argv: string[]): number {
-  const [command, ...rest] = argv;
+  const { file, rest: args } = parseArgs(argv);
+  if (file !== undefined) {
+    process.env.TODO_FILE = file;
+  }
+
+  const [command, ...rest] = args;
 
   switch (command) {
     case 'add': {
@@ -24,9 +30,17 @@ function main(argv: string[]): number {
       return 0;
     }
     default:
-      console.error('usage: tiny-todo <add|done|list> [args]');
+      console.error('usage: tiny-todo [--file <path>] <add|done|list> [args]');
       return 1;
   }
 }
 
-process.exitCode = main(process.argv.slice(2));
+// CLAUDE.md: the library throws, and this file turns the error into an exit
+// code. Without this, a bad argument or a corrupt data file reaches the user as
+// a stack trace.
+try {
+  process.exitCode = main(process.argv.slice(2));
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+}

@@ -61,6 +61,21 @@ describe('storage', () => {
     expect(() => load()).toThrow();
   });
 
+  it('treats an empty TODO_FILE as unset, not as a file named emptystring', () => {
+    const cwd = process.cwd();
+    process.chdir(directory);
+    try {
+      process.env.TODO_FILE = '';
+
+      save([{ title: 'buy milk', done: false }]);
+
+      expect(readdirSync(directory)).toEqual(['.tiny-todo.json']);
+      expect(load()).toEqual([{ title: 'buy milk', done: false }]);
+    } finally {
+      process.chdir(cwd);
+    }
+  });
+
   // This does NOT prove the write was atomic: a save() that writes the target
   // directly passes it too, because it never creates a temp file at all. It
   // only catches an atomic save() that forgets to clean up. Atomicity itself

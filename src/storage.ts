@@ -2,7 +2,11 @@ import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 
 import type { Todo } from './todo.js';
 
 function dataFile(): string {
-  return process.env.TODO_FILE ?? '.tiny-todo.json';
+  // `||`, not `??`: an empty TODO_FILE means unset, not a file named ''.
+  // `??` let '' through, and then `list` printed an empty list and exited 0 —
+  // the user's real list, apparently gone. `save()` was not silent about it:
+  // it threw on rename('.<pid>.tmp', '') and left nothing behind.
+  return process.env.TODO_FILE || '.tiny-todo.json';
 }
 
 export function load(): Todo[] {

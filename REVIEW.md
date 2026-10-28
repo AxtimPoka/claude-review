@@ -35,6 +35,12 @@ finding has exactly two ends:
    repo deliberately does not handle the case, that belongs in this file, or in
    `Non-goals` in CLAUDE.md. Then close the thread with a pointer to it.
 
+A reply that disputes a finding is itself a finding, and it carries the same
+burden of evidence: quote the line you are disputing. This repo has already
+lost a round to a "correction" that described a mistake the finding had not
+made, which the next review then accepted because it read the correction and
+not the original.
+
 "Won't fix" on its own is not an end. A reason that lives only inside a closed
 thread is a reason the next review cannot find, so the same finding comes back
 on the next pull request, and someone argues it again.

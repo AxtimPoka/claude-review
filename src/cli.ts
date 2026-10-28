@@ -1,9 +1,15 @@
+import { parseArgs } from './args.js';
 import { addTodo, completeTodo } from './todo.js';
 import { renderList } from './render.js';
 import { load, save } from './storage.js';
 
 function main(argv: string[]): number {
-  const [command, ...rest] = argv;
+  const { file, rest: args } = parseArgs(argv);
+  if (file !== undefined) {
+    process.env.TODO_FILE = file;
+  }
+
+  const [command, ...rest] = args;
 
   switch (command) {
     case 'add': {
@@ -24,7 +30,7 @@ function main(argv: string[]): number {
       return 0;
     }
     default:
-      console.error('usage: tiny-todo <add|done|list> [args]');
+      console.error('usage: tiny-todo [--file <path>] <add|done|list> [args]');
       return 1;
   }
 }

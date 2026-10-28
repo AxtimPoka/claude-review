@@ -23,17 +23,16 @@ count:
   the normal review if it loses data — see *What failure looks like here*,
   below.
 
-**Phase 2 — not in force yet. Other users on the same machine.** When this
-line says phase 2 is in force, the account becomes the boundary and these
-become real:
+**Phase 2 — IN FORCE. Other users on the same machine.** The account is the
+boundary. These are real:
 
 - A guessable temporary file path in a directory other users can write.
   `save()` writes to `<file>.<pid>.tmp`, and a pid is a small number.
 - The permissions the data file is created with.
 
-Until this section says phase 2 is in force, a phase 2 finding is out of
-scope. Close it with a pointer to this section and name the phase it belongs
-to. Do not weaken the finding — it is correct, and it is not yet ours.
+Phase 1's exclusions still hold: a path the user types is still a path that
+user already has, because the boundary is between accounts, not between a user
+and their own files.
 
 ## What failure looks like here
 

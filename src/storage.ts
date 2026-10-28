@@ -6,7 +6,8 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import type { Todo } from './todo.js';
 
 function dataFile(): string {
@@ -27,10 +28,11 @@ export function load(): Todo[] {
 
 export function save(todos: Todo[]): void {
   const file = dataFile();
-  // The temp file sits next to the target so the rename stays on one
-  // filesystem, where it is atomic: a reader sees either the whole old file or
-  // the whole new one, never a half-written list.
-  const temp = `${file}.${process.pid}.tmp`;
+  // EXPERIMENT. REVIEW.md lists this exact shape as a reason to reject a diff:
+  // renaming into place from somewhere else, such as the system temp
+  // directory. The rename may now cross a filesystem, where it is not atomic,
+  // and the name is guessable in a directory other users can write.
+  const temp = join(tmpdir(), `tiny-todo.${process.pid}.tmp`);
   try {
     writeFileSync(temp, JSON.stringify(todos, null, 2) + '\n', 'utf8');
     renameSync(temp, file);

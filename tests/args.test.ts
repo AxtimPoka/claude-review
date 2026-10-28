@@ -35,6 +35,10 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['--file'])).toThrow('needs a path');
   });
 
+  it('throws on an empty path, which would otherwise mean the default file', () => {
+    expect(() => parseArgs(['--file', '', 'list'])).toThrow('needs a path');
+  });
+
   it('throws when the path after --file is another flag', () => {
     expect(() => parseArgs(['--file', '--file', 'other.json'])).toThrow('needs a path');
   });

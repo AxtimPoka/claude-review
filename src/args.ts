@@ -31,7 +31,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
   if (rest[0] === '--file') {
     const value = rest[1];
-    if (value === undefined || value.startsWith('--')) {
+    // An empty path is not a path. It reaches storage.ts as TODO_FILE='',
+    // which survives `??` and becomes a file named '', so `list` prints an
+    // empty list and exits 0 — the user's real list, apparently gone.
+    if (value === undefined || value === '' || value.startsWith('--')) {
       throw new Error('--file needs a path');
     }
     file = value;

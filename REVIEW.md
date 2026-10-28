@@ -3,6 +3,38 @@
 Written by the code owners. If a review keeps raising something that is not in
 here, the fix belongs in this file, not in another round of comments.
 
+## Threat model
+
+This is a single-user command line tool. It has no network access, no runtime
+dependencies, and no privilege boundary: whoever runs it can already read and
+write every file their own account can. A finding has to name the boundary it
+crosses, and in this repo that boundary has to come from the phase below.
+
+**Phase 1 — the current phase. Assume there is no attacker.** A finding counts
+only if it harms the person running the command, by accident. These do not
+count:
+
+- A path the user supplies being used as a path. `--file ../../x` gives that
+  user nothing a text editor would not. There is no boundary for a traversal
+  to cross.
+- The data file being readable. It holds that user's own todos, on their own
+  machine, under their own account.
+- A crash on malformed input. That is robustness, not security. Raise it in
+  the normal review if it loses data — see *What failure looks like here*,
+  below.
+
+**Phase 2 — not in force yet. Other users on the same machine.** When this
+line says phase 2 is in force, the account becomes the boundary and these
+become real:
+
+- A guessable temporary file path in a directory other users can write.
+  `save()` writes to `<file>.<pid>.tmp`, and a pid is a small number.
+- The permissions the data file is created with.
+
+Until this section says phase 2 is in force, a phase 2 finding is out of
+scope. Close it with a pointer to this section and name the phase it belongs
+to. Do not weaken the finding — it is correct, and it is not yet ours.
+
 ## What failure looks like here
 
 This CLI owns a file of the user's data. The failures that matter, worst first:

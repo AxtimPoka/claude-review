@@ -3,6 +3,9 @@ name: AI review
 # Runs on every push to an open pull request, not only when it is opened. An
 # approval in this pipeline covers one commit; a review of the first commit
 # says nothing about the fourth. See PIPELINE.md, Step 3, decision 1.
+#
+# The cost of that choice is duplicate findings, so the prompt below makes the
+# run read the threads it already opened before it opens another one.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -34,6 +37,19 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
+            This job re-runs on every push and starts with no memory of the
+            last run. So before you read the diff, list the inline comments
+            that are already on this pull request:
+
+                gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments
+
+            Do not open a new thread for a finding that is already there,
+            whether or not that thread is resolved. A duplicate thread blocks
+            the merge a second time for one reason, and the author has to close
+            it by hand. If such a finding still applies after the new commits,
+            name it in your summary comment under "Still open" and leave the
+            original thread as the place it is discussed.
+
             Read REVIEW.md and CLAUDE.md before you read the diff. They are
             written by the code owners. Where they disagree with what you
             would check out of habit, they win. REVIEW.md names what failure
@@ -62,4 +78,4 @@ jobs:
               review to look thorough.
 
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*)"

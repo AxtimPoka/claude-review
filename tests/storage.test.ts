@@ -1,8 +1,17 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  linkSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { load, save } from '../src/storage.js';
+import { exportText, load, save } from '../src/storage.js';
 
 const originalDataFile = process.env.TODO_FILE;
 let directory: string;
@@ -74,6 +83,42 @@ describe('storage', () => {
     } finally {
       process.chdir(cwd);
     }
+  });
+
+  it('writes exported text to the path it was given', () => {
+    const target = join(directory, 'report.txt');
+
+    exportText(target, '1. [ ] buy milk\n');
+
+    expect(readFileSync(target, 'utf8')).toBe('1. [ ] buy milk\n');
+  });
+
+  it('refuses to write the export over the data file', () => {
+    save([{ title: 'buy milk', done: false }]);
+
+    expect(() => exportText(dataFile, 'rendered text\n')).toThrow('over the data file');
+    expect(() => exportText(join(directory, 'sub', '..', 'todos.json'), 'x\n')).toThrow(
+      'over the data file',
+    );
+    expect(load()).toEqual([{ title: 'buy milk', done: false }]);
+  });
+
+  it('refuses a symlink that points at the data file', () => {
+    save([{ title: 'buy milk', done: false }]);
+    const link = join(directory, 'link.json');
+    symlinkSync(dataFile, link);
+
+    expect(() => exportText(link, 'rendered text\n')).toThrow('over the data file');
+    expect(load()).toEqual([{ title: 'buy milk', done: false }]);
+  });
+
+  it('refuses a hardlink to the data file', () => {
+    save([{ title: 'buy milk', done: false }]);
+    const link = join(directory, 'hard.json');
+    linkSync(dataFile, link);
+
+    expect(() => exportText(link, 'rendered text\n')).toThrow('over the data file');
+    expect(load()).toEqual([{ title: 'buy milk', done: false }]);
   });
 
   // This does NOT prove the write was atomic: a save() that writes the target

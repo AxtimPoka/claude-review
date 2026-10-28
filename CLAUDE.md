@@ -16,7 +16,7 @@ interesting part, not the app.
 | `src/todo.ts` | Pure list operations. No I/O. |
 | `src/render.ts` | Turning todos into text. Display ids are 1-based. |
 | `src/storage.ts` | The only file that touches disk. Sensitive. |
-| `src/args.ts` | Pulling flags out of argv. Pure, no I/O. |
+| `src/args.ts` | Parsing and validating arguments. Pure, no I/O. |
 | `src/cli.ts` | Dispatch and exit codes. |
 
 ## Conventions

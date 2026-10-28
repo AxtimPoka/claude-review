@@ -21,6 +21,12 @@ concurrency:
 jobs:
   security:
     runs-on: ubuntu-latest
+
+    # One value, read by both the guard below and the action. A guard that
+    # hard-codes the path cannot catch a typo in the path it is guarding.
+    env:
+      SCAN_INSTRUCTIONS: REVIEW.md
+
     permissions:
       contents: read
       pull-requests: write
@@ -41,7 +47,7 @@ jobs:
       # traversal, and the job would still be green. That is REVIEW.md's third
       # failure class — silent failure — in our own pipeline. Fail loudly.
       - name: The scan instructions file must exist
-        run: test -f REVIEW.md
+        run: test -f "$SCAN_INSTRUCTIONS"
 
       # Pinned by commit, not @main. This action has no tags and no releases,
       # so the only moving alternative is a branch that can change under a
@@ -54,7 +60,7 @@ jobs:
           # The repo's own review guide, threat model included, is appended to
           # the audit prompt. One source of truth: editing REVIEW.md changes
           # what the scan looks for, with nothing to keep in sync.
-          custom-security-scan-instructions: REVIEW.md
+          custom-security-scan-instructions: ${{ env.SCAN_INSTRUCTIONS }}
 
           # false-positive-filtering-instructions is deliberately not set.
           # Phase 1 is for seeing the unfiltered noise. Each finding we declare

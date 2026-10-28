@@ -30,6 +30,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The action reads custom-security-scan-instructions as a file path, and
+      # silently skips a path that does not exist:
+      #
+      #   if scan_file and Path(scan_file).exists():
+      #       ...  # github_action_audit.py
+      #
+      # There is no error and no warning. A typo would leave the scan running
+      # with no threat model at all, reporting every user-supplied path as a
+      # traversal, and the job would still be green. That is REVIEW.md's third
+      # failure class — silent failure — in our own pipeline. Fail loudly.
+      - name: The scan instructions file must exist
+        run: test -f REVIEW.md
+
       # Pinned by commit, not @main. This action has no tags and no releases,
       # so the only moving alternative is a branch that can change under a
       # workflow we hand an API key to. The action pins its own dependencies

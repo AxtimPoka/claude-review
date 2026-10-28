@@ -76,7 +76,8 @@
 | Step 7 | 合併後 | 功能開關、逐步上線、回滾 | 還沒開始 |
 | Step 8 | 合併後 | 把漏掉的問題變成考題 | 還沒開始 |
 
-四個階段裡面，**前兩個做完了**。後兩個幾乎還沒動。
+「PR 前」做完了。「PR 中」做了三關裡的兩關——Step 5 還沒開始。後面兩個階段
+幾乎還沒動。
 
 Step 4 做完，但是它的驗收只達成一半。詳情在那一節的最後。
 
@@ -727,7 +728,7 @@ ClaudeCode found 1 security issues     # HIGH, insecure_temp_file
 
 #### 二：我的量測被抓到兩次
 
-AI 審核說「跨檔案系統不是不是原子的，是 `EXDEV`，整個失敗」。我去量。
+AI 審核說「跨檔案系統的 rename 不是寫到一半，是 `EXDEV`，整個失敗」。我去量。
 
 **第一次量就被它抓到方法有問題：**
 
@@ -758,22 +759,52 @@ unchanged    : true
 改完之後，AI 審核又抓到我**把嚴重度寫反了**：我寫「半截檔案是比較輕的失
 敗」，但半截檔案是這份文件自己列的第 1 類，最嚴重的那個。
 
-#### 四：審核工具讀到的 `CLAUDE.md` 可能不是這個 PR 的
+#### 四：審核工具讀到的 `CLAUDE.md` 是 main 的版本，而且那是刻意的
 
 AI 審核連續回報：它的工作目錄裡有一個沒人 commit 的 `CLAUDE.md` 修改。
 
 我猜是它自己改的，所以把它的編輯工具拿掉。**然後又發生了。猜錯了。**
 
-四個 PR 的資料完全一致：
+四個 PR 的資料完全一致，而且飄的方向固定（飄回 main 的版本）：
 
 | PR 有沒有改 `CLAUDE.md` | 飄掉幾次 |
 | --- | --- |
 | 改了（#5、#8） | 2 次、3 次 |
 | 沒改（#7、#10） | 0 次、0 次 |
 
-而且飄的方向固定：**飄回 main 的版本。**
+相關性指對了方向。但是**原因還是要去讀原始碼才知道**。
 
-**後果：一個要修改慣例文件的 PR，會被用舊的慣例來審。**
+`claude-code-action` 的 `restore-config.ts` 裡有一張清單：
+
+```ts
+// Paths that are both PR-controllable and read from cwd at CLI startup.
+export const SENSITIVE_PATHS = [
+  ".claude", ".mcp.json", ".claude.json", ".gitmodules",
+  ".ripgreprc", "CLAUDE.md", "CLAUDE.local.md", ".husky",
+];
+```
+
+**這是故意的，而且是安全措施。**
+
+理由：PR 的作者可以改寫 `CLAUDE.md`。那個檔案是審核工具自己的指令。**所以一個
+PR 本來可以改寫審查它的那個工具。** 這個 action 把它換回 main 的版本，切斷那條路。
+
+PR 的版本沒有被丟掉。它被存到 `.claude-pr/`，而且 log 寫得很明白：
+
+```
+Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
+```
+
+**「給審查 agent 用，但是不執行」。**
+
+#### 後果，和已知的做法
+
+**後果**：一個要修改慣例文件的 PR，會被用舊的慣例來審。
+
+**做法**：在 prompt 裡叫它去讀 `.claude-pr/CLAUDE.md`，當成「這個 PR 提議的
+慣例」，同時仍然把 main 的版本當成現行的規則。
+
+那正是這個 action 保留那份檔案的用途。**還沒做。**
 
 ---
 
@@ -811,7 +842,7 @@ AI 審核連續回報：它的工作目錄裡有一個沒人 commit 的 `CLAUDE.
 | 整個 repo 的結構性漏洞 | AI 審核只看改動，看不到它 | 需要一個不掛在 PR 上的獨立動作 |
 | 漏掉的問題沒有變成考題 | 沒有地方放，也沒有東西會去跑它 | 還沒決定 |
 | 這份文件寫的 GitHub 規則跟實際設定一不一樣 | 沒有東西在比對。AI 審核讀不到 branch protection 的設定，所以它只能相信作者寫的 | 還沒決定 |
-| 改 `CLAUDE.md` 的 PR 會被用舊的慣例審 | 那個工作在準備階段會把 `CLAUDE.md` 換成 main 的版本。四個 PR 的資料一致 | 還沒決定 |
+| 改 `CLAUDE.md` 的 PR 會被用舊的慣例審 | 那個 action 刻意把 `CLAUDE.md` 換成 main 的版本，防止 PR 改寫審查它的工具 | 做法已知：叫它讀 `.claude-pr/CLAUDE.md`。還沒做 |
 | 「不修 + 寫理由」這條路沒有走過 | 到現在每一則意見都是對的，所以沒機會走 | 等真的出現一則錯的意見 |
 
 ### `ci.yml` 那一項為什麼危險

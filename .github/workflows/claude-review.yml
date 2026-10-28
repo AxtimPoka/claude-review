@@ -1,0 +1,90 @@
+name: AI review
+
+# Runs on every push to an open pull request, not only when it is opened. An
+# approval in this pipeline covers one commit; a review of the first commit
+# says nothing about the fourth. See PIPELINE.md, Step 3, decision 1.
+#
+# The cost of that choice is duplicate findings, so the prompt below makes the
+# run read the threads it already opened before it opens another one.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Reading the existing threads only prevents a duplicate if the runs are
+# ordered. Two pushes in quick succession would otherwise start two runs that
+# both read the thread list before either has posted. This queues them per
+# pull request. cancel-in-progress would instead throw away the first run's
+# findings, which is the opposite of what this job is for.
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # The repository's own GITHUB_TOKEN, not the Claude GitHub App. One
+          # fewer thing to install, and one fewer thing that can be the reason
+          # a run failed. The cost is cosmetic: comments arrive from
+          # github-actions[bot] instead of claude[bot].
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          track_progress: true
+
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            This job re-runs on every push and starts with no memory of the
+            last run. So before you read the diff, list the inline comments
+            that are already on this pull request:
+
+                gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments --paginate
+
+            Do not open a new thread for a finding that is already there,
+            whether or not that thread is resolved. A duplicate thread blocks
+            the merge a second time for one reason, and the author has to close
+            it by hand. If such a finding still applies after the new commits,
+            name it in your summary comment under "Still open" and leave the
+            original thread as the place it is discussed.
+
+            Read REVIEW.md and CLAUDE.md before you read the diff. They are
+            written by the code owners. Where they disagree with what you
+            would check out of habit, they win. REVIEW.md names what failure
+            looks like here, how to report, the bug classes this repo has
+            already been bitten by, and the invariants no test guards.
+
+            Review the diff only. Do not report a problem that lives outside
+            the files this pull request touches, even a real one: the author
+            did not cause it, and the round trip costs them time for nothing.
+            Repo-level gaps are found by a separate pass over the whole
+            repository, which is not this job.
+
+            Rules:
+
+            - Every finding needs a file and a line. No evidence, no finding.
+            - Tag each finding Important, Nit, or Pre-existing.
+            - At most 3 Nits. More than that means you are reviewing style
+              instead of behaviour.
+            - Post findings as inline comments. Each one becomes a thread the
+              author must resolve before merging. You have no veto here:
+              merging is blocked by an unresolved thread, not by your verdict.
+            - If a finding is declined rather than fixed, the reason has to end
+              up in REVIEW.md or in CLAUDE.md. When you raise something those
+              files do not already cover, propose the exact line to add.
+            - If nothing is Important, say so in one line. Do not pad the
+              review to look thorough.
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*)"

@@ -25,6 +25,26 @@ only be reached by hand-editing the data file.
 - `Pre-existing` is for problems this diff did not introduce. Say so plainly so
   the author is not blamed for them.
 
+## How a finding gets closed
+
+A review comment is a thread, and an unresolved thread blocks the merge. So a
+finding has exactly two ends:
+
+1. **Fixed.** The commit that fixes it closes the thread.
+2. **Declined, with the reason written down here.** If the answer is that this
+   repo deliberately does not handle the case, that belongs in this file, or in
+   `Non-goals` in CLAUDE.md. Then close the thread with a pointer to it.
+
+A reply that disputes a finding is itself a finding, and it carries the same
+burden of evidence: quote the line you are disputing. This repo has already
+lost a round to a "correction" that described a mistake the finding had not
+made, which the next review then accepted because it read the correction and
+not the original.
+
+"Won't fix" on its own is not an end. A reason that lives only inside a closed
+thread is a reason the next review cannot find, so the same finding comes back
+on the next pull request, and someone argues it again.
+
 ## Worth checking in this repo
 
 - Does the change do what the PR says it does?

@@ -57,10 +57,14 @@ jobs:
         with:
           claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 
-          # The repo's own review guide, threat model included, is appended to
-          # the audit prompt. One source of truth: editing REVIEW.md changes
-          # what the scan looks for, with nothing to keep in sync.
-          custom-security-scan-instructions: ${{ env.SCAN_INSTRUCTIONS }}
+          # CONTROL RUN — DO NOT MERGE. The instructions input is removed on
+          # purpose, so the scan sees the same diff with no threat model. On
+          # the real branch it reports nothing, and that alone cannot tell
+          # "the threat model suppressed it" from "the scan never saw it".
+          # If this run reports the --file path, the threat model is what does
+          # the work. If it reports nothing here either, the experiment proves
+          # nothing and the design has to change.
+          # custom-security-scan-instructions: ${{ env.SCAN_INSTRUCTIONS }}
 
           # false-positive-filtering-instructions is deliberately not set.
           # Phase 1 is for seeing the unfiltered noise. Each finding we declare

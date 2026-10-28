@@ -35,3 +35,14 @@ export function save(todos: Todo[]): void {
     throw error;
   }
 }
+
+/**
+ * Writes rendered text to a path the user chose.
+ *
+ * Not the data file, so not atomic: a half-written export costs the user a
+ * re-run, while a half-written data file costs them their todos. The path is
+ * used as given — see the threat model in REVIEW.md.
+ */
+export function exportText(path: string, text: string): void {
+  writeFileSync(path, text, 'utf8');
+}

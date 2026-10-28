@@ -5,6 +5,7 @@ describe('parseArgs', () => {
   it('leaves argv alone when --file is not used', () => {
     expect(parseArgs(['add', 'buy milk'])).toEqual({
       file: undefined,
+      out: undefined,
       rest: ['add', 'buy milk'],
     });
   });
@@ -12,6 +13,7 @@ describe('parseArgs', () => {
   it('takes a leading path and removes both tokens', () => {
     expect(parseArgs(['--file', 'other.json', 'list'])).toEqual({
       file: 'other.json',
+      out: undefined,
       rest: ['list'],
     });
   });
@@ -41,6 +43,30 @@ describe('parseArgs', () => {
 
   it('throws when the path after --file is another flag', () => {
     expect(() => parseArgs(['--file', '--file', 'other.json'])).toThrow('needs a path');
+  });
+
+  it('takes --out the same way', () => {
+    expect(parseArgs(['--out', 'report.txt', 'list'])).toEqual({
+      file: undefined,
+      out: 'report.txt',
+      rest: ['list'],
+    });
+  });
+
+  it('takes both flags in either order', () => {
+    expect(parseArgs(['--out', 'report.txt', '--file', 'other.json', 'list'])).toEqual({
+      file: 'other.json',
+      out: 'report.txt',
+      rest: ['list'],
+    });
+  });
+
+  it('throws when a flag is given twice', () => {
+    expect(() => parseArgs(['--out', 'a.txt', '--out', 'b.txt', 'list'])).toThrow('twice');
+  });
+
+  it('throws when --out comes after the command', () => {
+    expect(() => parseArgs(['list', '--out', 'report.txt'])).toThrow('must come before');
   });
 
   it('does not mutate the caller array', () => {

@@ -1,10 +1,10 @@
 import { parseArgs } from './args.js';
 import { addTodo, completeTodo } from './todo.js';
 import { renderList } from './render.js';
-import { load, save } from './storage.js';
+import { exportText, load, save } from './storage.js';
 
 function main(argv: string[]): number {
-  const { file, rest: args } = parseArgs(argv);
+  const { file, out, rest: args } = parseArgs(argv);
   if (file !== undefined) {
     process.env.TODO_FILE = file;
   }
@@ -26,11 +26,16 @@ function main(argv: string[]): number {
       return 0;
     }
     case 'list': {
-      console.log(renderList(load()));
+      const text = renderList(load());
+      if (out !== undefined) {
+        exportText(out, text + '\n');
+        return 0;
+      }
+      console.log(text);
       return 0;
     }
     default:
-      console.error('usage: tiny-todo [--file <path>] <add|done|list> [args]');
+      console.error('usage: tiny-todo [--file <path>] [--out <path>] <add|done|list> [args]');
       return 1;
   }
 }

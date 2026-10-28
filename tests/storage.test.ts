@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { load, save } from '../src/storage.js';
+import { exportText, load, save } from '../src/storage.js';
 
 const originalDataFile = process.env.TODO_FILE;
 let directory: string;
@@ -74,6 +74,14 @@ describe('storage', () => {
     } finally {
       process.chdir(cwd);
     }
+  });
+
+  it('writes exported text to the path it was given', () => {
+    const target = join(directory, 'report.txt');
+
+    exportText(target, '1. [ ] buy milk\n');
+
+    expect(readFileSync(target, 'utf8')).toBe('1. [ ] buy milk\n');
   });
 
   // This does NOT prove the write was atomic: a save() that writes the target

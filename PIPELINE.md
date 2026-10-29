@@ -877,10 +877,12 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 | --- | --- | --- |
 | CI 紅 | 擋住 | 擋住 |
 | AI 審核**提出意見** | 擋住（討論沒解決） | 擋住 |
-| AI 審核**整個跑掛了** | **不擋，可以合併** | 擋住 |
+| AI 審核**金鑰壞掉** | **不擋，可以合併** | 擋住（PR #13、#14 驗過） |
+| 安全掃描**金鑰無效** | 不擋 | **還是不擋**（PR #14），見下面 |
 
 這跟 Step 4 學到的「零不等於壞掉」是同一個形狀，而且升級了：
-**不只數字會騙人，連那道門都分不出來。**
+**不只數字會騙人，連那道門都分不出來。** 而且下面會看到，必要檢查只補掉了
+其中一個工具。
 
 這件事差一點發生過：金鑰餘額不足的那一次。不過查過執行紀錄，那次是直接測
 金鑰測出來的，在審核 workflow 第一次跑在 PR 上之前，所以沒有真的有 PR 在那
@@ -982,15 +984,71 @@ AI 審核：   Either ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, ... is require
 安全掃描：  ANTHROPIC_API_KEY is not set
 ```
 
-| 失敗的方式 | 驗過了嗎 |
-| --- | --- |
-| 金鑰沒給 | 驗過，PR #13 |
-| 金鑰有給，但是餘額不足或被限流 | **沒有** |
+**第二種才是真的會發生的那一種**：金鑰通過檢查，然後 API 回一個錯誤。
 
-**第二種才是真的會發生的那一種。** 它走的是另一條路：金鑰通過驗證，然後 API
-回一個錯誤。那條路會不會讓工作失敗，這個實驗沒有回答。
+我本來寫「要測它得有第二個帳戶」。**那也是錯的，也是審核抓到的。** 一把格式
+對但是無效的金鑰就通得過兩個 action 的「有沒有給」檢查，然後拿到 401。不用
+第二個帳戶，只要再開一個丟掉的 PR。
 
-要測它得故意提供一把沒錢的金鑰，而那需要第二個帳戶。**還沒做。**
+### 實驗二（PR #14）：結果是分裂的，而且分裂的那一半很糟
+
+把兩個金鑰都換成 `sk-ant-api03-invalid`：
+
+```
+review=FAILURE    security=SUCCESS    check=SUCCESS
+mergeStateStatus=BLOCKED
+```
+
+**`security` 回報成功，而它根本沒有掃。** 那個 action 自己的註記寫得很清楚：
+
+```
+warning: ClaudeCode error: Security audit failed:
+         Claude Code execution failed with return code 1
+warning: ClaudeCode exited with code 1
+```
+
+**回傳碼 1，被降級成 warning，工作結論是 success。** 讀它的原始碼就知道這是
+刻意的：
+
+```bash
+python -u claudecode/github_action_audit.py ... || CLAUDECODE_EXIT_CODE=$?
+# Parse ClaudeCode results and count findings regardless of exit code
+...
+if jq -e '.error' claudecode/claudecode-results.json; then
+  echo "::warning::ClaudeCode error: $ERROR_MSG"
+  echo "findings_count=0" >> $GITHUB_OUTPUT
+```
+
+出錯的時候 `findings_count=0`——**跟掃乾淨一模一樣**。所以它對外的那個數字
+分不出「沒問題」和「沒掃」。
+
+### 所以必要檢查只補掉一半
+
+| 失敗的方式 | AI 審核 | 安全掃描 |
+| --- | --- | --- |
+| 金鑰沒給 | FAILURE，擋住（#13） | FAILURE，擋住（#13） |
+| 金鑰有給但是無效 | FAILURE，擋住（#14） | **SUCCESS，不擋（#14）** |
+
+PR #14 之所以是 `BLOCKED`，是因為 `review` 失敗。**如果只有安全掃描壞掉，
+那個 PR 會全綠，而且沒有被掃過。**
+
+這就是 `REVIEW.md` 的第 3 類失敗：**做了事情沒做成，還回報成功。**
+
+### 修法已知，但是還沒做
+
+那個 action 的 `findings-count` 不能用，因為出錯和乾淨都是 0。但是它另外吐
+一個 `results-file`，而那個檔案出錯的時候裡面有 `.error`。所以在它後面加一步
+就抓得到：
+
+```yaml
+- name: The scan must actually have run
+  run: |
+    jq -e '.error' "$RESULTS" > /dev/null && exit 1
+    jq -e '.findings | type == "array"' "$RESULTS" > /dev/null || exit 1
+```
+
+**還沒做。** 那是改 `.github/workflows/`，也就是這一關剛剛才決定「一律要人」
+的那個目錄。
 
 ### 這一節本來還有一句也是錯的
 
@@ -1020,7 +1078,8 @@ PR 上之前。
 | 這份文件寫的 GitHub 規則跟實際設定一不一樣 | 沒有東西在比對。AI 審核讀不到 branch protection 的設定，所以它只能相信作者寫的 | 還沒決定 |
 | 改 `CLAUDE.md` 的 PR 會被用舊的慣例審 | 那個 action 刻意把 `CLAUDE.md` 換成 main 的版本，防止 PR 改寫審查它的工具 | 做法已知：叫它讀 `.claude-pr/CLAUDE.md`。還沒做。另一條路是規定「改一條審查者用來判斷的規則，要自己一個 PR」，但那只蓋到一半：`CLAUDE.md` 的改動有兩種，跟著程式碼更新描述的那一種不能拆開，拆了會讓 main 有一段時間是過期的 |
 | 「不修 + 寫理由」這條路沒有走過 | 到現在每一則意見都是對的，所以沒機會走 | 等真的出現一則錯的意見 |
-| 金鑰「有給但是沒錢」的時候，門會不會擋 | 「金鑰沒給」那一種已經驗過會擋（PR #13）。「有給但是 API 回錯誤」是另一條路，沒驗過 | 要一把沒錢的金鑰，所以要第二個帳戶 |
+| 安全掃描壞掉的時候不會擋 | PR #14 量到：金鑰無效時它回報 success，`findings_count=0`，跟掃乾淨一樣。必要檢查擋不到它 | 修法已知：在它後面加一步檢查 `results-file` 裡有沒有 `.error`。改 workflow，要人看 |
+| 「餘額用完」那一條路 | #14 用的是無效金鑰（401），不是沒錢（400），所以只縮小了缺口 | 要一把真的沒錢的金鑰 |
 
 ### `ci.yml` 那一項為什麼危險
 
@@ -1056,7 +1115,7 @@ PR 上之前。
 | 安全掃描打開「每個 commit 都掃」 | 原本會用快取跳過後續推送，所以只有第一個 commit 被掃過。一個看不到 commit 的閘門不是閘門。 |
 | 拿掉審核工具的編輯工具 | 審一份自己改過的程式，審的不是作者寫的東西。代價是它也不能跑建置了。 |
 | 不砍掉安全層 | 之前提議過，理由是「它報零個」。那個推論錯了：零是它在階段一該有的輸出。 |
-| `review` 和 `security` 設成必要檢查 | 以前「跑掛了」和「跑完很乾淨」在門口長得一樣。代價是餘額用完的時候所有 PR 都卡住——那正是應該被告知的時候。 |
+| `review` 和 `security` 設成必要檢查 | 以前「跑掛了」和「跑完很乾淨」在門口長得一樣。「金鑰沒給」已驗過會擋（PR #13）；「金鑰無效」AI 審核會擋、**安全掃描不會**（PR #14）；「餘額用完」沒驗過。所以這一項補掉的是 AI 審核那一邊，不是兩邊。 |
 | 不開第二個帳號來湊核可人數 | GitHub 條款只允許一個免費帳號。而且自己的備用帳號會讓設定看起來有人審過，三個月後連自己都忘了那是誰。 |
 | 不用「多跑幾個 AI 審核」來解可用性 | 冗餘回答的是「這個判斷可不可信」，必要檢查回答的是「到底有沒有判斷過」。而且兩份共用同一把金鑰和餘額，只會更快花完。 |
 | 同事的範圍只給 `.github/workflows/` 和 `CODEOWNERS` | 那兩個路徑很少改，不會佔掉對方時間。`CODEOWNERS` 要包含自己，不然一個 PR 可以先刪掉它再改 workflow。 |
@@ -1073,7 +1132,7 @@ Step 1  讓錯誤「被說清楚」      → 寫下失敗長什麼樣
 Step 2  讓錯誤「自動被擋住」    → 把檢查搬上 CI，並且設成必要
 Step 3  讓錯誤「被讀出來」      → 讓 AI 對照專案讀每一份改動
 Step 4  讓「會被利用的」被看見  → 先寫下要防誰，再讓工具照著找
-Step 5  讓「門自己壞掉」被發現  → 每一關都要回報，不只是沒有壞消息
+Step 5  讓「門自己壞掉」被發現  → 要求每一關回報；驗過之後發現只成立一半
 ```
 
 而且每一關都用同一種方式驗證：

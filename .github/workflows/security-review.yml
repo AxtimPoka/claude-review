@@ -55,7 +55,7 @@ jobs:
       # the same way.
       - uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda
         with:
-          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-api-key: sk-ant-api03-invalid
 
           # The repo's own review guide, threat model included, is appended to
           # the audit prompt. One source of truth: editing REVIEW.md changes

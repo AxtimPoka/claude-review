@@ -49,10 +49,6 @@ jobs:
       - name: The scan instructions file must exist
         run: test -f "$SCAN_INSTRUCTIONS"
 
-      # Pinned by commit, not @main. This action has no tags and no releases,
-      # so the only moving alternative is a branch that can change under a
-      # workflow we hand an API key to. The action pins its own dependencies
-      # the same way.
       # The guard below reads a file at the repo root, and the repo root is the
       # PR's checkout — so the PR could ship that file itself. The action copies
       # its own results over it on most paths, but not all: it exits 0 before
@@ -64,6 +60,10 @@ jobs:
       - name: No results file before the scan
         run: rm -f claudecode-results.json
 
+      # Pinned by commit, not @main. This action has no tags and no releases,
+      # so the only moving alternative is a branch that can change under a
+      # workflow we hand an API key to. The action pins its own dependencies
+      # the same way.
       - uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda
         with:
           claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -108,7 +108,9 @@ jobs:
       # source writes `findings_count=0` on the error path, which is the number
       # a clean scan gives. The results file can: it carries `.error` when the
       # scan failed, and a `findings` array when it ran. The action copies it to
-      # the workspace root "regardless of the outcome", so this step can read it.
+      # the workspace root on most paths — but not all, which is why the step
+      # before the scan clears that path first. So a missing file here is a real
+      # outcome, not an impossible one, and it is treated as a failure.
       #
       # No `if:` here on purpose. This step exists for the case where the step
       # above reported success, which is the only case that reaches it.

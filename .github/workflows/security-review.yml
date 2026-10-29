@@ -86,3 +86,35 @@ jobs:
 
           comment-pr: true
           upload-results: true
+
+      # The action downgrades its own failures to warnings. Measured on #14 with
+      # a key that was present but invalid: the scan did not run, the step and
+      # the job both reported `success`, and the action's own annotation said
+      # `ClaudeCode exited with code 1`. So `security` being a required check
+      # does not mean the scan happened.
+      #
+      # `findings-count` cannot tell the two apart either — the action's own
+      # source writes `findings_count=0` on the error path, which is the number
+      # a clean scan gives. The results file can: it carries `.error` when the
+      # scan failed, and a `findings` array when it ran. The action copies it to
+      # the workspace root "regardless of the outcome", so this step can read it.
+      #
+      # No `if:` here on purpose. This step exists for the case where the step
+      # above reported success, which is the only case that reaches it.
+      - name: The scan must have run, not just reported success
+        env:
+          RESULTS: ${{ github.workspace }}/claudecode-results.json
+        run: |
+          if [ ! -f "$RESULTS" ]; then
+            echo "::error::the security scan produced no results file"
+            exit 1
+          fi
+          if jq -e '.error' "$RESULTS" > /dev/null 2>&1; then
+            echo "::error::the security scan did not run: $(jq -r '.error' "$RESULTS")"
+            exit 1
+          fi
+          if ! jq -e '.findings | type == "array"' "$RESULTS" > /dev/null 2>&1; then
+            echo "::error::the results file has no findings array; the scan did not complete"
+            exit 1
+          fi
+          echo "the scan ran. findings: $(jq -r '.findings | length' "$RESULTS")"

@@ -34,3 +34,16 @@ interesting part, not the app.
   renames over an existing file, which behaves differently there. Nobody runs
   this repo on Windows, so the check would cost something and protect nothing.
   Do not add a Windows job to CI. This is decided; it does not need revisiting.
+- CODEOWNERS covers `.github/`, `package.json`, the lockfile and the tool
+  configs — the files that decide what CI actually runs. It deliberately does
+  not cover `REVIEW.md` or `CLAUDE.md`, although they are the reviewer's
+  instructions and the same argument applies to them. They changed 4 times in
+  this repo's first 12 commits; owning them would make a third of all pull
+  requests wait on a second person. The two are not equally exposed, and the
+  difference is the reason this is a non-goal rather than a hole: the AI review
+  action replaces a pull request's `CLAUDE.md` with main's before it runs, so a
+  pull request cannot change the conventions it is judged by. `REVIEW.md` has
+  no such protection — the security scan reads the pull request's copy — so a
+  pull request can still rewrite the threat model it is scanned against. That
+  half has a fix that costs nobody's time, reading it from main in the
+  workflow, and `PIPELINE.md` records it as not done.

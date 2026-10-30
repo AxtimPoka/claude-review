@@ -1075,7 +1075,9 @@ PR 上之前。
 | `save()` 的不可分割性 | 測不了 | 已寫進 `REVIEW.md`，交給審查那一層 |
 | 覆寫之前沒有備份 | 沒有做 | 還沒決定 |
 | 讀檔時不檢查資料結構 | `JSON.parse` 的結果直接當成待辦清單 | 還沒決定 |
-| `ci.yml` 這個檔案本身 | 任何人改它都不用經過人 | 做法已定：CODEOWNERS 指向一個同事，範圍只給 `.github/workflows/` 和 `CODEOWNERS` 自己。等帳號 |
+| ~~`ci.yml` 這個檔案本身~~ **已處理** | 以前任何人改它都不用經過人 | CODEOWNERS 指向 `@dennisjhao`。範圍不只 workflow：`ci.yml` 只是呼叫 `npm run test`，真正決定它跑什麼的是 `package.json`、`package-lock.json`、`eslint.config.js`、`tsconfig.json`，所以那四個也擁有，加上 `CODEOWNERS` 自己 |
+| 安全掃描讀的是 PR 版本的 `REVIEW.md` | 威脅模型寫在 `REVIEW.md`，而掃描的 prompt 指向工作目錄那一份，也就是 PR 自己那一份。所以一個 PR 可以改寫「要防什麼」，然後被自己的新標準掃。`CLAUDE.md` 沒有這個問題，因為那個 action 會換成 main 的版本；`REVIEW.md` 不在它的保護名單裡 | 做法已知：在 workflow 裡用 `git show origin/main:REVIEW.md` 取 main 的版本，跟那個 action 對 `CLAUDE.md` 做的事一樣，不花任何人的時間。那是改 workflow，要 `@dennisjhao` 看。**還沒做** |
+| CODEOWNERS 刻意不擁有 `REVIEW.md` 和 `CLAUDE.md` | 它們是審查工具的說明書，照同樣的邏輯應該要擁有。但是 main 的 12 個 commit 裡它們各改過 4 次，擁有等於三分之一的 PR 要等第二個人 | 駁回，理由寫進 `CLAUDE.md` 的 Non-goals。`CLAUDE.md` 那一半本來就有保護，所以是真的 non-goal；`REVIEW.md` 那一半是上面那一列的洞 |
 | 整個 repo 的結構性漏洞 | AI 審核只看改動，看不到它 | 需要一個不掛在 PR 上的獨立動作 |
 | 漏掉的問題沒有變成考題 | 沒有地方放，也沒有東西會去跑它 | 還沒決定 |
 | 這份文件寫的 GitHub 規則跟實際設定一不一樣 | 沒有東西在比對。AI 審核讀不到 branch protection 的設定，所以它只能相信作者寫的 | 還沒決定 |
@@ -1114,7 +1116,7 @@ PR 上之前。
 | AI 審核只看改動 | 讀整個 repo 會讓作者每個 PR 都要解釋別人留下的問題。 |
 | 用 GitHub 自己的 token，不裝 Claude App | 少一個要安裝的東西，也少一個「失敗是因為它」的可能。 |
 | 安全掃描釘住 commit 編號 | 那個 action 沒有 tag 也沒有 release，唯一的替代是會變動的分支，而我們把金鑰交給它。 |
-| 掃描的「要找什麼」直接指向 `REVIEW.md` | 威脅模型只有一份。改那個檔案，掃描就跟著變，沒有第二份要同步。 |
+| 掃描的「要找什麼」直接指向 `REVIEW.md` | 威脅模型只有一份。改那個檔案，掃描就跟著變，沒有第二份要同步。代價是它讀的是 PR 那一份，所以 PR 可以改寫自己的威脅模型——見「還沒有人守的東西」。 |
 | 安全掃描打開「每個 commit 都掃」 | 原本會用快取跳過後續推送，所以只有第一個 commit 被掃過。一個看不到 commit 的閘門不是閘門。 |
 | 拿掉審核工具的編輯工具 | 審一份自己改過的程式，審的不是作者寫的東西。代價是它也不能跑建置了。 |
 | 不砍掉安全層 | 之前提議過，理由是「它報零個」。那個推論錯了：零是它在階段一該有的輸出。 |

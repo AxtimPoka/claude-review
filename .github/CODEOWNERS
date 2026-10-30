@@ -1,0 +1,19 @@
+# Step 5: the paths that always need a person.
+#
+# The article's rule is that any CI workflow file needs a human regardless of
+# how small the diff is. A one-person repo cannot do that with an approval
+# count, because GitHub will not let you approve your own pull request — so the
+# count stays at 0 and this file carries the rule instead.
+#
+# The scope is deliberately narrow. These paths change rarely, so being an
+# owner here costs almost no time. Widening it to the whole repo would make
+# every pull request wait on someone else.
+
+# CI can check everything except itself. A pull request can delete the test
+# step and add failing code in the same diff, and CI comes back green.
+/.github/workflows/ @dennisjhao
+
+# The file that assigns ownership has to be owned, or a pull request can delete
+# it first and change a workflow second. Same shape as the CLAUDE.md problem:
+# the thing that governs review must not be editable by what is being reviewed.
+/.github/CODEOWNERS @dennisjhao

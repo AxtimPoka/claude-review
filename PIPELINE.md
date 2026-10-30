@@ -1076,7 +1076,7 @@ PR 上之前。
 | 覆寫之前沒有備份 | 沒有做 | 還沒決定 |
 | 讀檔時不檢查資料結構 | `JSON.parse` 的結果直接當成待辦清單 | 還沒決定 |
 | ~~`ci.yml` 這個檔案本身~~ **已處理** | 以前任何人改它都不用經過人 | CODEOWNERS 指向 `@dennisjhao`。範圍不只 workflow：`ci.yml` 只是呼叫 `npm run test`，真正決定它跑什麼的是 `package.json`、`package-lock.json`、`eslint.config.js`、`tsconfig.json`，所以那四個也擁有，加上 `CODEOWNERS` 自己 |
-| 安全掃描讀的是 PR 版本的 `REVIEW.md` | 威脅模型寫在 `REVIEW.md`，而掃描的 prompt 指向工作目錄那一份，也就是 PR 自己那一份。所以一個 PR 可以改寫「要防什麼」，然後被自己的新標準掃。`CLAUDE.md` 沒有這個問題，因為那個 action 會換成 main 的版本；`REVIEW.md` 不在它的保護名單裡 | 做法已知：在 workflow 裡用 `git show origin/main:REVIEW.md` 取 main 的版本，跟那個 action 對 `CLAUDE.md` 做的事一樣，不花任何人的時間。那是改 workflow，要 `@dennisjhao` 看。**還沒做** |
+| **兩個審查層**都讀 PR 版本的 `REVIEW.md` | `REVIEW.md` 不在那個 action 的保護名單裡，所以兩層讀到的都是 PR 自己那一份。安全掃描的 prompt 指向它（威脅模型）；AI 審核的 prompt 也叫它先讀 `REVIEW.md`（bug 類別、沒有測試守的不變條件、Skip 清單）。所以一個 PR 能做的不只是改寫威脅模型——它可以把 `src/storage.ts` 加進 `## Skip`，或者刪掉一條不變條件，然後兩層都用新規則判它。`CLAUDE.md` 沒有這個問題，因為那個 action 會換成 main 的版本 | 做法已知，但是要做兩邊。安全掃描那邊：`git show origin/main:REVIEW.md`。AI 審核那邊：prompt 改成讀 main 的 `REVIEW.md`，PR 的版本只當成「提議」，跟 `.claude-pr/CLAUDE.md` 那一列同一個做法。只修一邊會讓這張表看起來已經關掉，而比較大的那一半還開著。兩邊都是改 workflow，要 `@dennisjhao` 看。**都還沒做** |
 | CODEOWNERS 刻意不擁有 `REVIEW.md` 和 `CLAUDE.md` | 它們是審查工具的說明書，照同樣的邏輯應該要擁有。但是 main 的 12 個 commit 裡它們各改過 4 次，擁有等於三分之一的 PR 要等第二個人 | 駁回，理由寫進 `CLAUDE.md` 的 Non-goals。`CLAUDE.md` 那一半本來就有保護，所以是真的 non-goal；`REVIEW.md` 那一半是上面那一列的洞 |
 | 整個 repo 的結構性漏洞 | AI 審核只看改動，看不到它 | 需要一個不掛在 PR 上的獨立動作 |
 | 漏掉的問題沒有變成考題 | 沒有地方放，也沒有東西會去跑它 | 還沒決定 |

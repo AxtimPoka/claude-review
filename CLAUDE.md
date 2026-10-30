@@ -42,8 +42,10 @@ interesting part, not the app.
   requests wait on a second person. The two are not equally exposed, and the
   difference is the reason this is a non-goal rather than a hole: the AI review
   action replaces a pull request's `CLAUDE.md` with main's before it runs, so a
-  pull request cannot change the conventions it is judged by. `REVIEW.md` has
-  no such protection — the security scan reads the pull request's copy — so a
-  pull request can still rewrite the threat model it is scanned against. That
-  half has a fix that costs nobody's time, reading it from main in the
-  workflow, and `PIPELINE.md` records it as not done.
+  pull request cannot change *that* file's conventions. `REVIEW.md` has no such
+  protection — both the security scan and the AI review read the pull request's
+  copy — and the conventions that actually decide findings live there: the bug
+  classes, the invariants no test guards, and the `Skip` list. So a pull request
+  can still rewrite the rules it is judged by. That half has a fix that costs
+  nobody's time, reading it from main in both workflows, and `PIPELINE.md`
+  records it as not done.

@@ -49,6 +49,17 @@ jobs:
       - name: The scan instructions file must exist
         run: test -f "$SCAN_INSTRUCTIONS"
 
+      # The guard below reads a file at the repo root, and the repo root is the
+      # PR's checkout — so the PR could ship that file itself. The action copies
+      # its own results over it on most paths, but not all: it exits 0 before
+      # the copy when the event is not a pull_request, and again on the cache
+      # skip that `run-every-commit: true` currently turns off. Either one is a
+      # one-line change away. A committed {"findings": []} would then satisfy
+      # every check below and the scan would be green having never run, which is
+      # the failure this whole file exists to stop.
+      - name: No results file before the scan
+        run: rm -f claudecode-results.json
+
       # Pinned by commit, not @main. This action has no tags and no releases,
       # so the only moving alternative is a branch that can change under a
       # workflow we hand an API key to. The action pins its own dependencies
@@ -86,3 +97,37 @@ jobs:
 
           comment-pr: true
           upload-results: true
+
+      # The action downgrades its own failures to warnings. Measured on #14 with
+      # a key that was present but invalid: the scan did not run, the step and
+      # the job both reported `success`, and the action's own annotation said
+      # `ClaudeCode exited with code 1`. So `security` being a required check
+      # does not mean the scan happened.
+      #
+      # `findings-count` cannot tell the two apart either — the action's own
+      # source writes `findings_count=0` on the error path, which is the number
+      # a clean scan gives. The results file can: it carries `.error` when the
+      # scan failed, and a `findings` array when it ran. The action copies it to
+      # the workspace root on most paths — but not all, which is why the step
+      # before the scan clears that path first. So a missing file here is a real
+      # outcome, not an impossible one, and it is treated as a failure.
+      #
+      # No `if:` here on purpose. This step exists for the case where the step
+      # above reported success, which is the only case that reaches it.
+      - name: The scan must have run, not just reported success
+        env:
+          RESULTS: ${{ github.workspace }}/claudecode-results.json
+        run: |
+          if [ ! -f "$RESULTS" ]; then
+            echo "::error::the security scan produced no results file"
+            exit 1
+          fi
+          if jq -e '.error' "$RESULTS" > /dev/null 2>&1; then
+            echo "::error::the security scan did not run: $(jq -r '.error' "$RESULTS")"
+            exit 1
+          fi
+          if ! jq -e '.findings | type == "array"' "$RESULTS" > /dev/null 2>&1; then
+            echo "::error::the results file has no findings array; the scan did not complete"
+            exit 1
+          fi
+          echo "the scan ran. findings: $(jq -r '.findings | length' "$RESULTS")"

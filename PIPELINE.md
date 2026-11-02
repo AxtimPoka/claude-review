@@ -98,7 +98,7 @@ Step 5 有三條硬規則。其中兩條已經在了。
 
 | 規則 | 已經在哪裡 |
 | --- | --- |
-| 核可只對特定版本有效 | branch protection 的第 7 項已開，但是第 4 項是 0 人，所以它現在還沒有東西可以作廢。真正在運作的是 Step 3 的決定 1：每次推新版本都重審一次。 |
+| 核可只對特定版本有效 | branch protection 的第 7 項已開。擁有的路徑上現在有核可可以作廢了（第 8 項），但是那一半還沒量；其他路徑是 0 人，所以還是靠 Step 3 的決定 1：每次推新版本都重審一次。 |
 | agent 的核可不算人工核可 | AI 審核沒有核可權。它只能留言。 |
 
 第三條是：**改 `.github/workflows/` 裡的檔案，一律要人工**。那一條現在也在了，而且量過（PR #18 / #19，見下面「量它」那一節）。
@@ -343,7 +343,8 @@ X Pull request #1 is not mergeable:
 | 4 | 需要幾個人核可 | 0 人 |
 | 5 | 這些規則也管管理員 | 開 |
 | 6 | 討論沒解決不能合併 | 開 |
-| 7 | 推新版本就作廢已經給過的核可 | 開（但是第 4 項是 0 人，所以目前沒有作用） |
+| 7 | 推新版本就作廢已經給過的核可 | 開（`dismiss_stale_reviews`）。在擁有的路徑上現在有作用了，見下面 |
+| 8 | 改到擁有的路徑要 code owner 核可 | 開（`require_code_owner_reviews`）。這一項才是 #18 被擋住的原因 |
 
 ### 第 3 項在防什麼
 
@@ -376,17 +377,26 @@ GitHub 不讓你核可自己的 PR。這個 repo 只有一個人。設成 1 人�
 
 **沒有第三個選項叫「留著不管」。**
 
-### 第 7 項現在為什麼沒有作用
+### 第 7 項：以前沒有作用，現在有一半
 
 這一項的意思是：有人核可了，然後作者又推了新版本，那個核可就作廢。
 
 理由跟 Step 3 的決定 1 一樣：**核可只對一個特定的版本有效。**
 
-但是第 4 項是 0 人。沒有人會核可，所以也沒有核可可以作廢。
+以前這一項沒有東西可以作廢，因為第 4 項是 0 人，沒有人會核可。
 
-**它現在是為 Step 5 先準備好的。** 那一關才會按風險要求人數。
+**現在分成兩種路徑：**
 
-真正在守這件事的是 AI 審核：每次推新版本都重審一次。
+```
+擁有的路徑    第 8 項要求 owner 核可  →  有核可可以作廢  →  第 7 項有作用
+其他路徑      還是 0 人               →  沒有核可        →  還是沒作用
+```
+
+**擁有的路徑那一半還沒量。** 要量它，需要先有一個 owner 的核可，然後推一個新
+版本，看那個核可會不會被拿掉。PR #21 正在等 `@dennisjhao` 核可，所以那是下一個
+機會。
+
+其他路徑上真正在守這件事的，還是 AI 審核：每次推新版本都重審一次。
 
 ---
 
@@ -855,7 +865,7 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 | 等級由**改動**決定，不是由作者決定 | 還沒做 |
 | 有些路徑一律要人，包含任何 CI workflow 檔案 | **已驗過**。PR #18 改 `ci.yml`：三個檢查全綠，`mergeStateStatus` 還是 `BLOCKED`。PR #19 只改 `REVIEW.md`：同樣三綠，`CLEAN` |
 | agent 的核可永遠不算人的 | 已經是。AI 審核只能留言，沒有核可權 |
-| 核可只對一個特定的 commit 有效 | 規則 7 已開，但第 4 項是 0 人所以沒有作用；實際在運作的是 Step 3 決定 1（每次推送都重審） |
+| 核可只對一個特定的 commit 有效 | 規則 7 已開。擁有的路徑上有核可可以作廢了（規則 8），**還沒量**；其他路徑靠 Step 3 決定 1（每次推送都重審） |
 | 一開始嚴，之後拿證據放寬 | 這一關照做 |
 
 ### 第 4 項是 0 人，而那可能本來就是對的
@@ -964,7 +974,7 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 `CODEOWNERS` 進了 main 之後，開兩個丟棄式 PR。兩個都只加一行註解，所以程式碼
 上沒有任何差別。唯一的差別是**動了哪一個檔案**。
 
-| | 改什麼 | 三個檢查 | `mergeStateStatus` | 被點名的人 |
+| | 改什麼 | 三個必要檢查（`check`、`review`、`security`） | `mergeStateStatus` | 被點名的人 |
 | --- | --- | --- | --- | --- |
 | PR #18 | `.github/workflows/ci.yml` | 全綠 | **BLOCKED** | `dennisjhao` |
 | PR #19 | `REVIEW.md`（刻意不擁有） | 全綠 | **CLEAN** | 沒有 |
@@ -978,7 +988,7 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 **兩個結論，各自獨立。**
 
 ```
-#18 BLOCKED  →  核可人數設成 0，GitHub 還是會要求 code owner
+#18 BLOCKED  →  就算核可人數是 0，GitHub 還是要求 code owner
                 文章那條「敏感路徑一律要人」成立
 
 #19 CLEAN    →  沒動到擁有的路徑，誰都不用等
@@ -987,14 +997,24 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 
 第二個結論和第一個一樣重要。一道擋住所有東西的門，會在三個月後被關掉。
 
+**擋住它的不是那個檔案。** 一份 `CODEOWNERS` 自己只會「點名」，不會擋。真正
+在擋的是 branch protection 的第 8 項（Require review from Code Owners）。那一項
+是開的（`require_code_owner_reviews: true`，查過 API）。
+
+這一點本來沒寫，而且規則表裡也沒有那一列——所以照那張表重建一次設定，#18 會
+變成 `CLEAN`。兩邊都補了。
+
 **一個會騙人的欄位。**
 
-`reviewDecision` 在兩個 PR 上都是 `null`，連 #18 被擋住的時候也是 `null`。
+`reviewDecision` 在兩個 PR 上都是空的，連 #18 被擋住的時候也是空的。
 
 ```
-gh pr view 18 --json reviewDecision   →  null      看起來沒人要審
-gh pr view 18 --json mergeStateStatus →  BLOCKED   真的在擋
+gh pr view 18 --json reviewDecision   →  {"reviewDecision": ""}   看起來沒人要審
+gh pr view 18 --json mergeStateStatus →  BLOCKED                  真的在擋
 ```
+
+（GraphQL 回的是 `null`，`gh` 把它印成空字串。兩個都是「沒有值」，但是照著
+這一節重跑的人看到的是 `""`。）
 
 要看的是 `mergeStateStatus`。只看 `reviewDecision` 會得到「門沒用」這個錯誤
 結論——而那個結論看起來有憑有據，因為它確實是 API 回的值。

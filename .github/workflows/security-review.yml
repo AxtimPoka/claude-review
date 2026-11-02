@@ -45,8 +45,12 @@ jobs:
       #
       # main's copy wins. The proposed copy is still in
       # `git diff origin/main...HEAD`, so the change stays reviewable; it just
-      # does not govern this run. Same shape as the CLAUDE.md swap that the AI
-      # review's action does for itself, which PIPELINE.md records.
+      # does not govern this run.
+      #
+      # Not the same shape as the CLAUDE.md swap the AI review's action does for
+      # itself: that one runs after its own checkout. This action does not
+      # check anything out, so a swap before it holds. The guard after the scan
+      # is what makes that assumption loud if it ever stops being true.
       #
       # No --depth on the fetch: this checkout is a full clone, and a shallow
       # fetch would turn it into a shallow one, which the scan's diff against
@@ -58,8 +62,8 @@ jobs:
             echo "::error::the pull request has no REVIEW.md"
             exit 1
           fi
-          git fetch --no-tags origin main
-          git show FETCH_HEAD:REVIEW.md > "$RUNNER_TEMP/REVIEW.main.md"
+          git fetch --no-tags --force origin main:refs/remotes/origin/main
+          git show origin/main:REVIEW.md > "$RUNNER_TEMP/REVIEW.main.md"
           mv "$RUNNER_TEMP/REVIEW.main.md" REVIEW.md
           echo "REVIEW.md is now main's copy ($(wc -l < REVIEW.md) lines)"
 
@@ -158,3 +162,18 @@ jobs:
             exit 1
           fi
           echo "the scan ran. findings: $(jq -r '.findings | length' "$RESULTS")"
+
+      # Detection, not prevention. This action does not check anything out
+      # today, so the swap before it holds — but that is an assumption about
+      # someone else's code, pinned by commit and reread only when the pin
+      # moves. If a future version does its own checkout, the scan would be
+      # handed the pull request's own threat model and still report success.
+      # The swap step's log line would still say it worked.
+      - name: The scan must have used main's REVIEW.md
+        run: |
+          if ! git show origin/main:REVIEW.md | diff -q - "$SCAN_INSTRUCTIONS" > /dev/null; then
+            echo "::error::$SCAN_INSTRUCTIONS is not main's copy; the scan used the wrong threat model"
+            git show origin/main:REVIEW.md | diff - "$SCAN_INSTRUCTIONS" | head -20
+            exit 1
+          fi
+          echo "the scan used main's REVIEW.md"

@@ -45,7 +45,12 @@ interesting part, not the app.
   pull request cannot change *that* file's conventions. `REVIEW.md` has no such
   protection of its own, and the conventions that actually decide findings live
   there: the bug classes, the invariants no test guards, and the `Skip` list. So
-  both workflows now do the same swap by hand, in a step before the action runs:
-  the working tree's `REVIEW.md` is replaced with main's. A pull request's copy
-  is a proposal, still visible in the diff, and it does not govern the run that
-  judges it.
+  both workflows now swap it by hand, in a step before the action runs: the
+  working tree's `REVIEW.md` is replaced with main's. A pull request's copy is a
+  proposal, still visible in the diff, and it does not govern the run that
+  judges it. The AI review's action checks the pull request's branch out again
+  after that step, so its `actions/checkout` is pinned to the head sha rather
+  than the merge ref — otherwise git restores the branch's copy whenever main
+  has changed the file since. Both jobs end with a step that compares the file
+  to main's and fails if it differs, because the swap holding is an assumption
+  about someone else's action.

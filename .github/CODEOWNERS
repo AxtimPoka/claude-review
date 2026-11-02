@@ -78,8 +78,9 @@
 #
 # This used to say they were left out on cost, because CLAUDE.md changed 6
 # times and REVIEW.md 4 in 15 commits. That was the wrong number: only one of
-# those commits (9ea5104) touched neither file alongside a path that is already
-# owned, so owning both would add about 1 pull request in 15, not half. The
+# those commits (9ea5104) touched either file without also touching a path that
+# is already owned, so owning both would add about 1 pull request in 15, not
+# half. The
 # cost reason does not hold, and it is withdrawn.
 #
 # What holds is the safety reason: neither file governs the run that judges it

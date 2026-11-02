@@ -47,8 +47,8 @@ interesting part, not the app.
   It deliberately does not cover `REVIEW.md` or `CLAUDE.md`, although they are
   the reviewer's instructions and the same argument applies to them. The reason
   is not cost: `CLAUDE.md` changed 6 times and `REVIEW.md` 4 in 15 commits, but
-  only one of those commits touched neither file next to a path that is already
-  owned, so owning both would add about 1 pull request in 15. The reason is
+  only one of those commits touched either file without also touching a path
+  that is already owned, so owning both would add about 1 pull request in 15. The reason is
   that neither governs the run that judges it any more. The AI
   review action replaces a pull request's `CLAUDE.md` with main's before it
   runs, so a pull request cannot change *that* file's conventions. `REVIEW.md`

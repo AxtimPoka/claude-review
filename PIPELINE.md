@@ -941,16 +941,23 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 | 機器帳號 | 條款允許，但它是給自動化用的，而文章說 agent 的核可不算人的 |
 | 多跑幾個 AI 審核 | 它解的是「意見可不可信」，不是「有沒有跑」。而且共用同一把金鑰和同一個餘額，跑兩份只是更快把錢花完 |
 
-所以結論是**請一個真的人**，而且範圍只給 `.github/workflows/` 和
-`CODEOWNERS` 自己。
+所以結論是**請一個真的人**。範圍是「決定 CI 到底跑什麼」的那些檔案：
+`.github/workflows/`、`package.json`、`package-lock.json`、`eslint.config.js`、
+`tsconfig.json`，加上 `CODEOWNERS` 自己。
 
 為什麼 `CODEOWNERS` 要包含自己：**指派所有權的那個檔案，必須自己也被擁有。**
 不然一個 PR 可以先把它刪掉，再改 workflow。這跟 `CLAUDE.md` 那件事是同一個
 形狀的問題。
 
-範圍這麼窄是因為那兩個路徑很少改，不會佔掉對方太多時間。
+為什麼要包含那四個工具設定檔：`ci.yml` 裡面只有 `npm run lint`、
+`npm run typecheck`、`npm test` 這三行。那三行實際跑什麼，寫在
+`package.json` 裡。把 `"test"` 改成 `"true"` 就是一個永遠會過、但是什麼
+都沒跑的測試。只擁有 workflow 目錄擋不到這一手。
 
-**還沒做，等帳號。**
+範圍還是很窄，因為這些路徑很少改：main 的 12 個 commit 裡，那四個檔案
+各改過 1 次（都在最初的 commit）。
+
+**檔案已經寫好，帳號也有了（`@dennisjhao`，write 權限）。**還有一半沒驗證：GitHub 在 `required_approving_review_count=0` 的設定下，會不會真的要求 owner 審。那要等 `CODEOWNERS` 進了 main 才測得到，因為 GitHub 讀的是 **base 分支**那一份。
 
 ### 驗收：弄壞它，看它會不會變紅
 
@@ -1075,7 +1082,7 @@ PR 上之前。
 | `save()` 的不可分割性 | 測不了 | 已寫進 `REVIEW.md`，交給審查那一層 |
 | 覆寫之前沒有備份 | 沒有做 | 還沒決定 |
 | 讀檔時不檢查資料結構 | `JSON.parse` 的結果直接當成待辦清單 | 還沒決定 |
-| ~~`ci.yml` 這個檔案本身~~ **已處理** | 以前任何人改它都不用經過人 | CODEOWNERS 指向 `@dennisjhao`。範圍不只 workflow：`ci.yml` 只是呼叫 `npm run test`，真正決定它跑什麼的是 `package.json`、`package-lock.json`、`eslint.config.js`、`tsconfig.json`，所以那四個也擁有，加上 `CODEOWNERS` 自己 |
+| `ci.yml` 這個檔案本身 | 任何人改它都不用經過人 | CODEOWNERS 已加，指向 `@dennisjhao`。範圍不只 workflow：`ci.yml` 只是呼叫 `npm run test`，真正決定它跑什麼的是 `package.json`、`package-lock.json`、`eslint.config.js`、`tsconfig.json`，所以那四個也擁有，加上 `CODEOWNERS` 自己。**量過一項**：`gh api .../codeowners/errors?ref=chore/codeowners` 回 `{"errors":[]}`，所以語法對、`@dennisjhao` 真的有寫入權限——這一項要量，是因為語法寫錯或者那個人沒權限的時候，GitHub 不會報錯，它只是安靜地忽略那一行。查的時候一定要帶 `ref`：不帶的話查的是 main，而 main 上還沒有這個檔案，端點回 404。**還沒量**：`required_approving_review_count=0` 的時候 GitHub 會不會真的要求 owner 審。這一項要等檔案在 main 上才測得到，merge 後用一個丟棄式 PR 量，量到了才改成已處理 |
 | **兩個審查層**都讀 PR 版本的 `REVIEW.md` | `REVIEW.md` 不在那個 action 的保護名單裡，所以兩層讀到的都是 PR 自己那一份。安全掃描的 prompt 指向它（威脅模型）；AI 審核的 prompt 也叫它先讀 `REVIEW.md`（bug 類別、沒有測試守的不變條件、Skip 清單）。所以一個 PR 能做的不只是改寫威脅模型——它可以把 `src/storage.ts` 加進 `## Skip`，或者刪掉一條不變條件，然後兩層都用新規則判它。`CLAUDE.md` 沒有這個問題，因為那個 action 會換成 main 的版本 | 做法已知，但是要做兩邊。安全掃描那邊：`git show origin/main:REVIEW.md`。AI 審核那邊：prompt 改成讀 main 的 `REVIEW.md`，PR 的版本只當成「提議」，跟 `.claude-pr/CLAUDE.md` 那一列同一個做法。只修一邊會讓這張表看起來已經關掉，而比較大的那一半還開著。兩邊都是改 workflow，要 `@dennisjhao` 看。**都還沒做** |
 | CODEOWNERS 刻意不擁有 `REVIEW.md` 和 `CLAUDE.md` | 它們是審查工具的說明書，照同樣的邏輯應該要擁有。但是 main 的 12 個 commit 裡它們各改過 4 次，擁有等於三分之一的 PR 要等第二個人 | 駁回，理由寫進 `CLAUDE.md` 的 Non-goals。`CLAUDE.md` 那一半本來就有保護，所以是真的 non-goal；`REVIEW.md` 那一半是上面那一列的洞 |
 | 整個 repo 的結構性漏洞 | AI 審核只看改動，看不到它 | 需要一個不掛在 PR 上的獨立動作 |
@@ -1123,7 +1130,7 @@ PR 上之前。
 | `review` 和 `security` 設成必要檢查 | 以前「跑掛了」和「跑完很乾淨」在門口長得一樣。「金鑰沒給」已驗過會擋（PR #13）；「金鑰無效」AI 審核會擋、**安全掃描不會**（PR #14）；「餘額用完」沒驗過。所以這一項補掉的是 AI 審核那一邊，不是兩邊。 |
 | 不開第二個帳號來湊核可人數 | GitHub 條款只允許一個免費帳號。而且自己的備用帳號會讓設定看起來有人審過，三個月後連自己都忘了那是誰。 |
 | 不用「多跑幾個 AI 審核」來解可用性 | 冗餘回答的是「這個判斷可不可信」，必要檢查回答的是「到底有沒有判斷過」。而且兩份共用同一把金鑰和餘額，只會更快花完。 |
-| 同事的範圍只給 `.github/workflows/` 和 `CODEOWNERS` | 那兩個路徑很少改，不會佔掉對方時間。`CODEOWNERS` 要包含自己，不然一個 PR 可以先刪掉它再改 workflow。 |
+| 同事的範圍是「決定 CI 跑什麼」的那些檔案 | 不只 `.github/workflows/`，還有 `package.json`、lockfile、`eslint.config.js`、`tsconfig.json`，加上 `CODEOWNERS` 自己。只擁有 workflow 目錄擋不住「把 `"test"` 改成 `"true"`」。`CODEOWNERS` 要包含自己，不然一個 PR 可以先刪掉它再改 workflow。這些路徑 12 個 commit 裡各改過 1 次，所以不會佔掉對方時間。 |
 
 ---
 

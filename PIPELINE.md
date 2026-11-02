@@ -101,7 +101,7 @@ Step 5 有三條硬規則。其中兩條已經在了。
 | 核可只對特定版本有效 | branch protection 的第 7 項已開，但是第 4 項是 0 人，所以它現在還沒有東西可以作廢。真正在運作的是 Step 3 的決定 1：每次推新版本都重審一次。 |
 | agent 的核可不算人工核可 | AI 審核沒有核可權。它只能留言。 |
 
-還沒做的那一條是：**改 `.github/workflows/` 裡的檔案，一律要人工。**
+第三條是：**改 `.github/workflows/` 裡的檔案，一律要人工**。那一條現在也在了，而且量過（PR #18 / #19，見下面「量它」那一節）。
 
 ### Step 3 跟原本的計畫有一個落差
 
@@ -853,7 +853,7 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 | 規則 | 我們 |
 | --- | --- |
 | 等級由**改動**決定，不是由作者決定 | 還沒做 |
-| 有些路徑一律要人，包含任何 CI workflow 檔案 | 做法已定，等帳號 |
+| 有些路徑一律要人，包含任何 CI workflow 檔案 | **已驗過**。PR #18 改 `ci.yml`：三個檢查全綠，`mergeStateStatus` 還是 `BLOCKED`。PR #19 只改 `REVIEW.md`：同樣三綠，`CLEAN` |
 | agent 的核可永遠不算人的 | 已經是。AI 審核只能留言，沒有核可權 |
 | 核可只對一個特定的 commit 有效 | 規則 7 已開，但第 4 項是 0 人所以沒有作用；實際在運作的是 Step 3 決定 1（每次推送都重審） |
 | 一開始嚴，之後拿證據放寬 | 這一關照做 |
@@ -957,7 +957,51 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 範圍還是很窄，因為這些路徑很少改：main 的 12 個 commit 裡，那四個檔案
 各改過 1 次（都在最初的 commit）。
 
-**檔案已經寫好，帳號也有了（`@dennisjhao`，write 權限）**。還有一半沒驗證：GitHub 在 `required_approving_review_count=0` 的設定下，會不會真的要求 owner 審。那要等 `CODEOWNERS` 進了 main 才測得到，因為 GitHub 讀的是 **base 分支**那一份。
+**檔案寫好了，帳號有了（`@dennisjhao`，write 權限），而且兩面都量過了**。下一節是量法和結果。
+
+### 量它：兩個 PR，只差改了哪個檔案
+
+`CODEOWNERS` 進了 main 之後，開兩個丟棄式 PR。兩個都只加一行註解，所以程式碼
+上沒有任何差別。唯一的差別是**動了哪一個檔案**。
+
+| | 改什麼 | 三個檢查 | `mergeStateStatus` | 被點名的人 |
+| --- | --- | --- | --- | --- |
+| PR #18 | `.github/workflows/ci.yml` | 全綠 | **BLOCKED** | `dennisjhao` |
+| PR #19 | `REVIEW.md`（刻意不擁有） | 全綠 | **CLEAN** | 沒有 |
+
+兩個都是 `mergeable=MERGEABLE`，都沒有未解的討論串，base 分支都是最新的。
+所以 #18 被擋住只剩一個原因：**那個人還沒核可**。
+
+這是一個對照實驗，不是一次觀察。只看 #18 的話，說不出它是被 owner 規則擋住，
+還是被別的要求擋住。#19 把其他要求都排除掉了。
+
+**兩個結論，各自獨立。**
+
+```
+#18 BLOCKED  →  核可人數設成 0，GitHub 還是會要求 code owner
+                文章那條「敏感路徑一律要人」成立
+
+#19 CLEAN    →  沒動到擁有的路徑，誰都不用等
+                範圍沒有過寬，不會天天佔掉同事時間
+```
+
+第二個結論和第一個一樣重要。一道擋住所有東西的門，會在三個月後被關掉。
+
+**一個會騙人的欄位。**
+
+`reviewDecision` 在兩個 PR 上都是 `null`，連 #18 被擋住的時候也是 `null`。
+
+```
+gh pr view 18 --json reviewDecision   →  null      看起來沒人要審
+gh pr view 18 --json mergeStateStatus →  BLOCKED   真的在擋
+```
+
+要看的是 `mergeStateStatus`。只看 `reviewDecision` 會得到「門沒用」這個錯誤
+結論——而那個結論看起來有憑有據，因為它確實是 API 回的值。
+
+這和 Step 4 那個洞是同一個形狀：**一個欄位回報了什麼，不等於那件事發生了
+什麼**。
+
 
 ### 驗收：弄壞它，看它會不會變紅
 
@@ -1082,7 +1126,7 @@ PR 上之前。
 | `save()` 的不可分割性 | 測不了 | 已寫進 `REVIEW.md`，交給審查那一層 |
 | 覆寫之前沒有備份 | 沒有做 | 還沒決定 |
 | 讀檔時不檢查資料結構 | `JSON.parse` 的結果直接當成待辦清單 | 還沒決定 |
-| `ci.yml` 這個檔案本身 | 任何人改它都不用經過人 | CODEOWNERS 已加，指向 `@dennisjhao`。範圍不只 workflow：`ci.yml` 只是呼叫 `npm run test`，真正決定它跑什麼的是 `package.json`、`package-lock.json`、`eslint.config.js`、`tsconfig.json`，所以那四個也擁有，加上 `CODEOWNERS` 自己。**量過一項**：`gh api .../codeowners/errors?ref=chore/codeowners` 回 `{"errors":[]}`，所以語法對、`@dennisjhao` 真的有寫入權限——這一項要量，是因為語法寫錯或者那個人沒權限的時候，GitHub 不會報錯，它只是安靜地忽略那一行。查的時候一定要帶 `ref`：不帶的話查的是 main，而 main 上還沒有這個檔案，端點回 404。**還沒量**：`required_approving_review_count=0` 的時候 GitHub 會不會真的要求 owner 審。這一項要等檔案在 main 上才測得到，merge 後用一個丟棄式 PR 量，量到了才改成已處理 |
+| ~~`ci.yml` 這個檔案本身~~ **已處理** | 以前任何人改它都不用經過人 | CODEOWNERS 指向 `@dennisjhao`。範圍不只 workflow：`ci.yml` 只是呼叫 `npm run test`，真正決定它跑什麼的是 `package.json`、`package-lock.json`、`eslint.config.js`、`tsconfig.json`，所以那四個也擁有，加上 `CODEOWNERS` 自己。**兩項都量過了。** 一，`gh api .../codeowners/errors` 回 `{"errors":[]}`，所以語法對、那個人真的有寫入權限（語法寫錯或者人沒權限的時候 GitHub 不報錯，它只是安靜地忽略那一行；查 PR 分支要帶 `ref`，不帶的話查的是 main）。二，PR #18 改 `ci.yml`，三個檢查全綠還是 `BLOCKED`；PR #19 只改 `REVIEW.md`，同樣三綠變 `CLEAN`。所以門會擋，而且範圍沒有過寬 |
 | **兩個審查層**都讀 PR 版本的 `REVIEW.md` | `REVIEW.md` 不在那個 action 的保護名單裡，所以兩層讀到的都是 PR 自己那一份。安全掃描的 prompt 指向它（威脅模型）；AI 審核的 prompt 也叫它先讀 `REVIEW.md`（bug 類別、沒有測試守的不變條件、Skip 清單）。所以一個 PR 能做的不只是改寫威脅模型——它可以把 `src/storage.ts` 加進 `## Skip`，或者刪掉一條不變條件，然後兩層都用新規則判它。`CLAUDE.md` 沒有這個問題，因為那個 action 會換成 main 的版本 | 做法已知，但是要做兩邊。安全掃描那邊：`git show origin/main:REVIEW.md`。AI 審核那邊：prompt 改成讀 main 的 `REVIEW.md`，PR 的版本只當成「提議」，跟 `.claude-pr/CLAUDE.md` 那一列同一個做法。只修一邊會讓這張表看起來已經關掉，而比較大的那一半還開著。兩邊都是改 workflow，要 `@dennisjhao` 看。**都還沒做** |
 | CODEOWNERS 刻意不擁有 `REVIEW.md` 和 `CLAUDE.md` | 它們是審查工具的說明書，照同樣的邏輯應該要擁有。但是 main 的 12 個 commit 裡它們各改過 4 次，擁有等於三分之一的 PR 要等第二個人 | 駁回，理由寫進 `CLAUDE.md` 的 Non-goals。`CLAUDE.md` 那一半本來就有保護，所以是真的 non-goal；`REVIEW.md` 那一半是上面那一列的洞 |
 | 整個 repo 的結構性漏洞 | AI 審核只看改動，看不到它 | 需要一個不掛在 PR 上的獨立動作 |

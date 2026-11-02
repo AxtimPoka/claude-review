@@ -151,3 +151,5 @@ reverting the code does not restore a file.
 - `package-lock.json`
 - `dist/`
 - Formatting and import order. eslint owns those.
+
+<!-- probe: throwaway change to measure that an unowned path needs nobody. Will be closed. -->

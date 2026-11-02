@@ -48,8 +48,10 @@ jobs:
       #
       # main's copy wins. The proposed copy is still in
       # `git diff origin/main...HEAD`, so the change stays reviewable; it just
-      # does not govern this run. Same shape as the action's own CLAUDE.md
-      # swap, which PIPELINE.md records.
+      # does not govern this run. Not the same shape as the action's own
+      # CLAUDE.md swap: that one runs after its checkout, this one before,
+      # which is why the checkout above is pinned to the head sha and why the
+      # last step in this job checks that the swap survived.
       #
       # This checkout is shallow, so main is not here yet. The fetch writes
       # refs/remotes/origin/main explicitly: checking out a sha above means

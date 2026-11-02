@@ -30,6 +30,31 @@ jobs:
         with:
           fetch-depth: 1
 
+      # REVIEW.md decides what a finding is here: the bug classes, the
+      # invariants no test guards, and the Skip list. It is not in the action's
+      # SENSITIVE_PATHS, so without this step the job reads the pull request's
+      # own copy. A pull request could add src/storage.ts to ## Skip, or delete
+      # an invariant, and then be judged by the rules it just wrote.
+      #
+      # main's copy wins. The proposed copy is still in
+      # `git diff origin/main...HEAD`, so the change stays reviewable; it just
+      # does not govern this run. Same shape as the action's own CLAUDE.md
+      # swap, which PIPELINE.md records.
+      #
+      # This checkout is shallow, so main is not here yet. A plain fetch
+      # deepens it, which is enough to read one file out of it. Written to a
+      # temp path first, because `> REVIEW.md` truncates before git can fail.
+      - name: Judge against main's REVIEW.md, not the pull request's
+        run: |
+          if [ ! -f REVIEW.md ]; then
+            echo "::error::the pull request has no REVIEW.md"
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          git show FETCH_HEAD:REVIEW.md > "$RUNNER_TEMP/REVIEW.main.md"
+          mv "$RUNNER_TEMP/REVIEW.main.md" REVIEW.md
+          echo "REVIEW.md is now main's copy ($(wc -l < REVIEW.md) lines)"
+
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -100,11 +125,20 @@ jobs:
           # prompt's no-edit rule was a request with nothing behind it.
           #
           # This removes the edit path. It does not make the checkout
-          # read-only: Bash can still write, `sed -i` for one. And the cause
-          # of the CLAUDE.md edit on #5 was never established — the job log
-          # shows no tool calls — so this closes the likeliest route, not a
-          # known one. If a checkout drifts again after this, the cause was
-          # something else, and we will know that much.
+          # read-only: Bash can still write, `sed -i` for one.
+          #
+          # The cause of the CLAUDE.md edit on #5 is now known, and it was not
+          # a tool call — which is why the job log showed none. The action
+          # replaces a pull request's CLAUDE.md with main's before the run, in
+          # its own restore-config.ts, and keeps the pull request's copy under
+          # .claude-pr/. Every review round on #17 reported the same
+          # uncommitted CLAUDE.md and reviewed the commit instead. PIPELINE.md
+          # records the mechanism.
+          #
+          # So this flag closes an edit path that turned out not to be the one
+          # used. It stays, because the prompt's no-edit rule had nothing
+          # behind it either way — but it is not the fix for that drift, and a
+          # checkout that differs here is expected, not a symptom.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*)"
             --disallowedTools "Edit,Write,MultiEdit,NotebookEdit"

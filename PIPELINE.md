@@ -957,7 +957,7 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 範圍還是很窄，因為這些路徑很少改：main 的 12 個 commit 裡，那四個檔案
 各改過 1 次（都在最初的 commit）。
 
-**檔案已經寫好，帳號也有了（`@dennisjhao`，write 權限）。**還有一半沒驗證：GitHub 在 `required_approving_review_count=0` 的設定下，會不會真的要求 owner 審。那要等 `CODEOWNERS` 進了 main 才測得到，因為 GitHub 讀的是 **base 分支**那一份。
+**檔案已經寫好，帳號也有了（`@dennisjhao`，write 權限）**。還有一半沒驗證：GitHub 在 `required_approving_review_count=0` 的設定下，會不會真的要求 owner 審。那要等 `CODEOWNERS` 進了 main 才測得到，因為 GitHub 讀的是 **base 分支**那一份。
 
 ### 驗收：弄壞它，看它會不會變紅
 
@@ -1130,7 +1130,7 @@ PR 上之前。
 | `review` 和 `security` 設成必要檢查 | 以前「跑掛了」和「跑完很乾淨」在門口長得一樣。「金鑰沒給」已驗過會擋（PR #13）；「金鑰無效」AI 審核會擋、**安全掃描不會**（PR #14）；「餘額用完」沒驗過。所以這一項補掉的是 AI 審核那一邊，不是兩邊。 |
 | 不開第二個帳號來湊核可人數 | GitHub 條款只允許一個免費帳號。而且自己的備用帳號會讓設定看起來有人審過，三個月後連自己都忘了那是誰。 |
 | 不用「多跑幾個 AI 審核」來解可用性 | 冗餘回答的是「這個判斷可不可信」，必要檢查回答的是「到底有沒有判斷過」。而且兩份共用同一把金鑰和餘額，只會更快花完。 |
-| 同事的範圍是「決定 CI 跑什麼」的那些檔案 | 不只 `.github/workflows/`，還有 `package.json`、lockfile、`eslint.config.js`、`tsconfig.json`，加上 `CODEOWNERS` 自己。只擁有 workflow 目錄擋不住「把 `"test"` 改成 `"true"`」。`CODEOWNERS` 要包含自己，不然一個 PR 可以先刪掉它再改 workflow。這些路徑 12 個 commit 裡各改過 1 次，所以不會佔掉對方時間。 |
+| 同事的範圍是「決定 CI 跑什麼」的那些檔案 | 不只 `.github/workflows/`，還有 `package.json`、lockfile、`eslint.config.js`、`tsconfig.json`，加上 `CODEOWNERS` 自己。只擁有 workflow 目錄擋不住「把 `"test"` 改成 `"true"`」。`CODEOWNERS` 要包含自己，不然一個 PR 可以先刪掉它再改 workflow。那四個工具設定檔 12 個 commit 裡各改過 1 次（都在最初的 commit），所以不會佔掉對方時間。 |
 
 ---
 

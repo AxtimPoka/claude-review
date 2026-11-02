@@ -11,11 +11,15 @@
 # GitHub will not let you approve your own pull request. This file carries the
 # rule instead.
 #
-# The scope is deliberately narrow, and the cost is measured, not assumed. Of
-# the repo's 15 commits: the four CI-input files below changed once each, in
-# the initial commit; the workflows changed more; `src/storage.ts` changed 3
-# times. So being an owner here lands on roughly one pull request in five.
-# Widening it to the whole repo would make every pull request wait.
+# The cost is measured, not assumed — and measured the right way. What a path
+# costs is not how often it changes; it is how often it changes in a commit
+# that touches nothing else already owned. Of the repo's 15 commits, 10 touch
+# at least one path below, mostly the workflows while this pipeline was being
+# built. `src/storage.ts` adds 2 of those 10: its third change was the initial
+# commit, which was owned already. So the scope is wide in gross terms and the
+# last addition to it was cheap, and those are two different numbers.
+#
+# Widening it to the whole repo would still make every pull request wait.
 
 # --- What CI runs ---
 #
@@ -71,13 +75,22 @@
 # --- Deliberately NOT owned: REVIEW.md and CLAUDE.md ---
 #
 # They are the reviewer's instructions, so by the logic above they belong here.
-# They are left out on cost: of the repo's 15 commits, CLAUDE.md changed 6
-# times and REVIEW.md 4. Owning them would put an owner on something like half
-# of all pull requests.
 #
-# Leaving them out is safe because neither one governs the run that judges it
+# This used to say they were left out on cost, because CLAUDE.md changed 6
+# times and REVIEW.md 4 in 15 commits. That was the wrong number: only one of
+# those commits (9ea5104) touched neither file alongside a path that is already
+# owned, so owning both would add about 1 pull request in 15, not half. The
+# cost reason does not hold, and it is withdrawn.
+#
+# What holds is the safety reason: neither file governs the run that judges it
 # any more. The AI review's action swaps in main's CLAUDE.md before it runs,
 # and both review jobs now swap in main's REVIEW.md and then check that the
 # swap held. A pull request's copy of either file is a proposal, visible in the
 # diff and reviewable, with no say over its own review. CLAUDE.md's Non-goals
 # carries the reasoning; PIPELINE.md records how it was fixed.
+#
+# One caveat on that 1-in-15: it is low because this exercise happened to batch
+# doc edits into the pull requests that changed workflows. A doc-only pull
+# request is perfectly normal and #20 was one, so the figure will rise. If it
+# does, the choice is worth making again — on the safety reason, which is the
+# one that stands.

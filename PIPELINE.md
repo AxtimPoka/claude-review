@@ -891,7 +891,7 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 | 等級 | 這個 repo 的哪些路徑 | 文章要幾個人 | GitHub 上要幾個核可 |
 | --- | --- | --- | --- |
 | 低 | `PIPELINE.md`、`README.md`、`.gitignore` | 0 人 | 0 |
-| 中 | `src/todo.ts`、`src/render.ts`、`src/args.ts`、`src/cli.ts`、它們的測試、`REVIEW.md`、`CLAUDE.md` | 1 人 | **0** |
+| 中 | `src/todo.ts`、`src/render.ts`、`src/args.ts`、`src/cli.ts`、它們的測試、`REVIEW.md`、`CLAUDE.md`、`.github/pull_request_template.md` | 1 人 | **0** |
 | 高 | `src/storage.ts` 和它的測試、`.github/workflows/`、`package.json`、lockfile、`eslint.config.js`、`tsconfig.json`、`CODEOWNERS` | 2 人 | **1** |
 
 **「中」要 1 個人，但是 GitHub 上是 0 個核可。** 這不是放水，是上一節那條：
@@ -912,6 +912,12 @@ Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)
 ### 為什麼不用第二張表
 
 「高」就是「列在 `CODEOWNERS` 裡」。上面那張表只是解釋，不是第二份真相。
+
+**不是整個 `.github/` 都擁有。** 擁有的是 `workflows/` 和 `CODEOWNERS` 自己。
+`pull_request_template.md` 是「中」——它跟 `REVIEW.md` 一樣是「操控一次審查」的
+檔案，不是「文件或文案」，所以不放「低」。它不需要像 `REVIEW.md` 那樣換成 main
+的版本，因為沒有任何審查工具讀它：它是給開 PR 的人看的，所以一個改它的 PR 影響
+不到自己那一次審查。
 
 如果把等級寫成另一個檔案（比方說 `risk-tiers.yml`），就會有兩份資料要同步，而
 這份文件裡已經有一列缺口是「**這份文件寫的 GitHub 規則跟實際設定一不一樣｜沒有
@@ -934,12 +940,55 @@ src/storage.ts   唯一碰硬碟的檔案
 `CLAUDE.md` 自己就標它 **Sensitive**。`REVIEW.md` 裡那些「沒有測試守的不變條件」
 講的也是它——因為那些條件從程式裡面測不出來。
 
-**代價量過了：** 15 個 commit 裡它改過 3 次，所以大約每五個 PR 有一個會等人。
+**代價量過了，而我第一次量錯了。**
+
+我寫「15 個 commit 裡改過 3 次，所以大約每五個 PR 有一個會等人」。那個數字是
+`storage.ts` 一個檔案的，我拿它當成整個擁有範圍的代價。
+
+```
+整個擁有範圍碰到的 commit    10 / 15     ← 三分之二，不是五分之一
+這個改動多出來的             2 個 commit
+```
+
+**加一條路徑的代價，不是它改過幾次，是它在「不碰其他已擁有路徑」的 commit 裡改
+過幾次。** `storage.ts` 改過 3 次，但其中一次是最初的 commit，那一次本來就擁有，
+所以邊際成本是 2 不是 3。
+
+這個錯誤還連帶影響另一個決定——見下面「我用錯的數字駁回了一件事」。
 
 **測試也一起擁有。** 只擁有程式碼、不擁有壓著它的測試，就是 `ci.yml` 那個錯誤再
 犯一次：一個 PR 先放寬測試，再改它後面的程式碼。這一項不花額外成本——改過
 `src/storage.ts` 的那 3 個 commit，每一個都在同一個 commit 裡改了它的測試，而且
 從來沒有任何 commit 只改測試。
+
+### 我用錯的數字駁回了一件事
+
+同一個錯誤還撐著另一個決定。
+
+`REVIEW.md` 和 `CLAUDE.md` 是審查工具的說明書，照上面的邏輯應該要擁有。我駁回
+了，理由寫的是**成本**：
+
+> main 的 commit 裡它們各改過 4 次和 6 次，擁有等於大約一半的 PR 要等第二個人。
+
+```
+毛成本    9 / 15 個 commit 碰到它們      ← 我用的數字
+邊際成本  1 個 commit                    ← 真正的代價
+```
+
+只有一個 commit（`9ea5104`）碰到它們、而且沒有同時碰到任何已經擁有的路徑。其他
+八次都夾在改 workflow 的 PR 裡，那些 PR 本來就要等人。
+
+**所以那個成本理由不成立，撤回。**
+
+撐著這個駁回的是另一個理由，而那一個站得住：兩個檔案都已經不再管審它自己的那一
+次審查了。`CLAUDE.md` 由那個 action 換成 main 的版本；`REVIEW.md` 由兩個工作自己
+換，換完還有一道檢查確認換成功。一個 PR 改它們等於提一個建議，看得到、審得到，
+但是對自己那一次審查沒有發言權。
+
+**一個保留條件：** 那個 1/15 這麼低，是因為這個練習剛好把文件的修改都夾在改
+workflow 的 PR 裡。只改文件的 PR 很正常，#20 就是一個。所以那個數字會往上走。等
+它走上去的時候，這個決定值得重新做一次——而且要用那個站得住的理由，不是用成本。
+
 
 ### 還缺的兩件事
 

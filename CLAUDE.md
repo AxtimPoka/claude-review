@@ -35,18 +35,21 @@ interesting part, not the app.
   this repo on Windows, so the check would cost something and protect nothing.
   Do not add a Windows job to CI. This is decided; it does not need revisiting.
 - CODEOWNERS is the high risk tier, nothing more and nothing less. It covers
-  the files that decide what CI actually runs — `.github/`, `package.json`, the
-  lockfile and the tool configs — plus `src/storage.ts` and its test, the
-  highest-risk code in the repo. The medium tier asks for one person, and the
+  the files that decide what CI actually runs — `.github/workflows/`,
+  `.github/CODEOWNERS`, `package.json`, the lockfile, `eslint.config.js` and
+  `tsconfig.json` — plus `src/storage.ts` and its test, the highest-risk code
+  in the repo. Not all of `.github/`: `pull_request_template.md` is medium,
+  like the other files that steer a review. The medium tier asks for one person, and the
   person who prompted a change counts as that one, so it needs no approval
   here; the high tier asks for two, which is the author plus one, which is
   exactly one approval. That is why there is no second file listing tiers:
   "high" and "listed in CODEOWNERS" are the same thing, so nothing can drift.
   It deliberately does not cover `REVIEW.md` or `CLAUDE.md`, although they are
-  the reviewer's instructions and the same argument applies to them. Of this
-  repo's 15 commits, `CLAUDE.md` changed 6 times and `REVIEW.md` 4; owning them
-  would put a second person on about half of all pull requests. Leaving them
-  out is safe because neither governs the run that judges it any more. The AI
+  the reviewer's instructions and the same argument applies to them. The reason
+  is not cost: `CLAUDE.md` changed 6 times and `REVIEW.md` 4 in 15 commits, but
+  only one of those commits touched neither file next to a path that is already
+  owned, so owning both would add about 1 pull request in 15. The reason is
+  that neither governs the run that judges it any more. The AI
   review action replaces a pull request's `CLAUDE.md` with main's before it
   runs, so a pull request cannot change *that* file's conventions. `REVIEW.md`
   has no such protection of its own, and the conventions that actually decide

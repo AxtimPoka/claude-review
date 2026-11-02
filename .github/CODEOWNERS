@@ -80,8 +80,7 @@
 # times and REVIEW.md 4 in 15 commits. That was the wrong number: only one of
 # those commits (9ea5104) touched either file without also touching a path that
 # is already owned, so owning both would add about 1 pull request in 15, not
-# half. The
-# cost reason does not hold, and it is withdrawn.
+# half. The cost reason does not hold, and it is withdrawn.
 #
 # What holds is the safety reason: neither file governs the run that judges it
 # any more. The AI review's action swaps in main's CLAUDE.md before it runs,

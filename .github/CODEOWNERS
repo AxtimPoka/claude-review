@@ -1,13 +1,21 @@
-# Step 5: the paths that always need a person.
+# Step 5: this file IS the high tier.
 #
-# The article's rule is that any CI workflow file needs a human regardless of
-# how small the diff is. A one-person repo cannot do that with an approval
-# count, because GitHub will not let you approve your own pull request — so the
-# count stays at 0 and this file carries the rule instead.
+# The risk tiers and what they cost are in PIPELINE.md, Step 5. In short: the
+# person who prompted a change counts as one of its reviewers, so the medium
+# tier's one person is already filled by the author and needs no approval here.
+# The high tier's two people are the author plus one more, which is exactly one
+# GitHub approval. So "high tier" and "listed in this file" are the same thing,
+# and there is no second list to drift out of step with this one.
 #
-# The scope is deliberately narrow. Every path below changed once, in the
-# initial commit, except the workflows. Being an owner here costs almost no
-# time. Widening it to the whole repo would make every pull request wait.
+# The approval count stays at 0 because a one-person repo cannot raise it:
+# GitHub will not let you approve your own pull request. This file carries the
+# rule instead.
+#
+# The scope is deliberately narrow, and the cost is measured, not assumed. Of
+# the repo's 15 commits: the four CI-input files below changed once each, in
+# the initial commit; the workflows changed more; `src/storage.ts` changed 3
+# times. So being an owner here lands on roughly one pull request in five.
+# Widening it to the whole repo would make every pull request wait.
 
 # --- What CI runs ---
 #
@@ -32,6 +40,26 @@
 # for deciding who signs it off.
 /package-lock.json @dennisjhao
 
+# --- The highest-risk code ---
+#
+# The article's high tier is "the highest-risk code, plus a small set of paths
+# that always need two people". In this repo the first half is one file.
+#
+# `src/storage.ts` is the only file that touches the disk, and `save()` renames
+# over an existing file. A bug here does not produce a wrong answer; it loses
+# the user's list. CLAUDE.md already calls the file sensitive, and REVIEW.md
+# carries invariants for it that no test guards, because they cannot be tested
+# from inside the process.
+
+/src/storage.ts @dennisjhao
+
+# Owning the code and not the test that holds it down is the `ci.yml` mistake
+# again: a pull request weakens the test and changes the code behind it. This
+# costs nothing extra — all 3 commits that touched `src/storage.ts` touched
+# this file in the same commit, and no commit has ever touched it alone.
+
+/tests/storage.test.ts @dennisjhao
+
 # --- This file ---
 #
 # The file that assigns ownership has to be owned, or a pull request deletes it
@@ -43,7 +71,13 @@
 # --- Deliberately NOT owned: REVIEW.md and CLAUDE.md ---
 #
 # They are the reviewer's instructions, so by the logic above they belong here.
-# They are left out because they changed 4 times in this repo's 12 commits,
-# and owning them would make a third of all pull requests wait on someone else.
-# The reason is written into CLAUDE.md's Non-goals, and the uneven protection
-# they already have is recorded in PIPELINE.md.
+# They are left out on cost: of the repo's 15 commits, CLAUDE.md changed 6
+# times and REVIEW.md 4. Owning them would put an owner on something like half
+# of all pull requests.
+#
+# Leaving them out is safe because neither one governs the run that judges it
+# any more. The AI review's action swaps in main's CLAUDE.md before it runs,
+# and both review jobs now swap in main's REVIEW.md and then check that the
+# swap held. A pull request's copy of either file is a proposal, visible in the
+# diff and reviewable, with no say over its own review. CLAUDE.md's Non-goals
+# carries the reasoning; PIPELINE.md records how it was fixed.

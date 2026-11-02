@@ -32,3 +32,5 @@ jobs:
       - name: Test
         if: ${{ !cancelled() }}
         run: npm test
+
+# probe: throwaway change to measure whether CODEOWNERS blocks this. Will be closed.

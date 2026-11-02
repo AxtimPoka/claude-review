@@ -1,13 +1,25 @@
-# Step 5: the paths that always need a person.
+# Step 5: this file IS the high tier.
 #
-# The article's rule is that any CI workflow file needs a human regardless of
-# how small the diff is. A one-person repo cannot do that with an approval
-# count, because GitHub will not let you approve your own pull request — so the
-# count stays at 0 and this file carries the rule instead.
+# The risk tiers and what they cost are in PIPELINE.md, Step 5. In short: the
+# person who prompted a change counts as one of its reviewers, so the medium
+# tier's one person is already filled by the author and needs no approval here.
+# The high tier's two people are the author plus one more, which is exactly one
+# GitHub approval. So "high tier" and "listed in this file" are the same thing,
+# and there is no second list to drift out of step with this one.
 #
-# The scope is deliberately narrow. Every path below changed once, in the
-# initial commit, except the workflows. Being an owner here costs almost no
-# time. Widening it to the whole repo would make every pull request wait.
+# The approval count stays at 0 because a one-person repo cannot raise it:
+# GitHub will not let you approve your own pull request. This file carries the
+# rule instead.
+#
+# The cost is measured, not assumed — and measured the right way. What a path
+# costs is not how often it changes; it is how often it changes in a commit
+# that touches nothing else already owned. Of the repo's 15 commits, 10 touch
+# at least one path below, mostly the workflows while this pipeline was being
+# built. `src/storage.ts` adds 2 of those 10: its third change was the initial
+# commit, which was owned already. So the scope is wide in gross terms and the
+# last addition to it was cheap, and those are two different numbers.
+#
+# Widening it to the whole repo would still make every pull request wait.
 
 # --- What CI runs ---
 #
@@ -32,6 +44,26 @@
 # for deciding who signs it off.
 /package-lock.json @dennisjhao
 
+# --- The highest-risk code ---
+#
+# The article's high tier is "the highest-risk code, plus a small set of paths
+# that always need two people". In this repo the first half is one file.
+#
+# `src/storage.ts` is the only file that touches the disk, and `save()` renames
+# over an existing file. A bug here does not produce a wrong answer; it loses
+# the user's list. CLAUDE.md already calls the file sensitive, and REVIEW.md
+# carries invariants for it that no test guards, because they cannot be tested
+# from inside the process.
+
+/src/storage.ts @dennisjhao
+
+# Owning the code and not the test that holds it down is the `ci.yml` mistake
+# again: a pull request weakens the test and changes the code behind it. This
+# costs nothing extra — all 3 commits that touched `src/storage.ts` touched
+# this file in the same commit, and no commit has ever touched it alone.
+
+/tests/storage.test.ts @dennisjhao
+
 # --- This file ---
 #
 # The file that assigns ownership has to be owned, or a pull request deletes it
@@ -43,7 +75,22 @@
 # --- Deliberately NOT owned: REVIEW.md and CLAUDE.md ---
 #
 # They are the reviewer's instructions, so by the logic above they belong here.
-# They are left out because they changed 4 times in this repo's 12 commits,
-# and owning them would make a third of all pull requests wait on someone else.
-# The reason is written into CLAUDE.md's Non-goals, and the uneven protection
-# they already have is recorded in PIPELINE.md.
+#
+# This used to say they were left out on cost, because CLAUDE.md changed 6
+# times and REVIEW.md 4 in 15 commits. That was the wrong number: only one of
+# those commits (9ea5104) touched either file without also touching a path that
+# is already owned, so owning both would add about 1 pull request in 15, not
+# half. The cost reason does not hold, and it is withdrawn.
+#
+# What holds is the safety reason: neither file governs the run that judges it
+# any more. The AI review's action swaps in main's CLAUDE.md before it runs,
+# and both review jobs now swap in main's REVIEW.md and then check that the
+# swap held. A pull request's copy of either file is a proposal, visible in the
+# diff and reviewable, with no say over its own review. CLAUDE.md's Non-goals
+# carries the reasoning; PIPELINE.md records how it was fixed.
+#
+# One caveat on that 1-in-15: it is low because this exercise happened to batch
+# doc edits into the pull requests that changed workflows. A doc-only pull
+# request is perfectly normal and #20 was one, so the figure will rise. If it
+# does, the choice is worth making again — on the safety reason, which is the
+# one that stands.

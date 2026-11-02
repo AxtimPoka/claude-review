@@ -26,9 +26,50 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      # The PR head, not the merge ref. The action below checks out the PR's
+      # head branch itself, and a dirty file only survives that move when the
+      # blob is identical in both commits. Measured on this PR's own run: the
+      # log shows `git checkout --force refs/remotes/pull/21/merge`, then
+      # `Previous HEAD position was b7e171b Merge ...` and `Switched to a new
+      # branch`. From the merge commit, a REVIEW.md that main has changed since
+      # the branch point has a different blob, so git would quietly restore the
+      # branch's stale copy — or refuse the checkout if the file is also dirty.
+      # From the head commit, the action's move is between identical trees.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      # REVIEW.md decides what a finding is here: the bug classes, the
+      # invariants no test guards, and the Skip list. It is not in the action's
+      # SENSITIVE_PATHS, so without this step the job reads the pull request's
+      # own copy. A pull request could add src/storage.ts to ## Skip, or delete
+      # an invariant, and then be judged by the rules it just wrote.
+      #
+      # main's copy wins. The proposed copy is still in
+      # `git diff origin/main...HEAD`, so the change stays reviewable; it just
+      # does not govern this run. Not the same shape as the action's own
+      # CLAUDE.md swap: that one runs after its checkout, this one before,
+      # which is why the checkout above is pinned to the head sha and why the
+      # last step in this job checks that the swap survived.
+      #
+      # This checkout is shallow, so main is not here yet. The fetch writes
+      # refs/remotes/origin/main explicitly: checking out a sha above means
+      # actions/checkout no longer creates that ref on its own, and the prompt
+      # tells the reviewer to run `git diff origin/main...HEAD`. No --depth,
+      # so the clone is not made shallower than it already is. main's copy goes
+      # to a temp path first, because `> REVIEW.md` truncates before git can
+      # fail.
+      - name: Judge against main's REVIEW.md, not the pull request's
+        run: |
+          if [ ! -f REVIEW.md ]; then
+            echo "::error::the pull request has no REVIEW.md"
+            exit 1
+          fi
+          git fetch --no-tags --force origin main:refs/remotes/origin/main
+          git show origin/main:REVIEW.md > "$RUNNER_TEMP/REVIEW.main.md"
+          mv "$RUNNER_TEMP/REVIEW.main.md" REVIEW.md
+          echo "REVIEW.md is now main's copy ($(wc -l < REVIEW.md) lines)"
 
       - uses: anthropics/claude-code-action@v1
         with:
@@ -100,11 +141,43 @@ jobs:
           # prompt's no-edit rule was a request with nothing behind it.
           #
           # This removes the edit path. It does not make the checkout
-          # read-only: Bash can still write, `sed -i` for one. And the cause
-          # of the CLAUDE.md edit on #5 was never established — the job log
-          # shows no tool calls — so this closes the likeliest route, not a
-          # known one. If a checkout drifts again after this, the cause was
-          # something else, and we will know that much.
+          # read-only: Bash can still write, `sed -i` for one.
+          #
+          # The cause of the CLAUDE.md edit on #5 is now known, and it was not
+          # a tool call — which is why the job log showed none. The action
+          # replaces a pull request's CLAUDE.md with main's before the run, in
+          # its own restore-config.ts, and keeps the pull request's copy under
+          # .claude-pr/. Every review round on #17 reported the same
+          # uncommitted CLAUDE.md and reviewed the commit instead. PIPELINE.md
+          # records the mechanism.
+          #
+          # So this flag closes an edit path that turned out not to be the one
+          # used. It stays, because the prompt's no-edit rule had nothing
+          # behind it either way — but it is not the fix for that drift, and a
+          # checkout that differs here is expected, not a symptom.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*)"
             --disallowedTools "Edit,Write,MultiEdit,NotebookEdit"
+
+      # The step above is prevention. This is detection, in the same shape as
+      # security-review.yml's "the scan must have run": if the reviewer was
+      # handed the wrong rules, say so loudly instead of posting a review that
+      # looks normal.
+      #
+      # The action checks out the PR's head branch itself, after the swap. That
+      # move is safe only while the checkout above stays pinned to the head sha.
+      # Anyone who changes that line, or any future version of the action that
+      # moves between different trees, silently gets the pull request's own
+      # REVIEW.md back — and the swap step's log line would still say it
+      # succeeded. That is this repo's bug class #3, in the pipeline itself.
+      #
+      # No `if:` on purpose. This step is for the case where the review above
+      # reported success, which is the only case that reaches it.
+      - name: The review must have used main's REVIEW.md
+        run: |
+          if ! git show origin/main:REVIEW.md | diff -q - REVIEW.md > /dev/null; then
+            echo "::error::REVIEW.md is not main's copy; the review was judged by the wrong rules"
+            git show origin/main:REVIEW.md | diff - REVIEW.md | head -20
+            exit 1
+          fi
+          echo "the review used main's REVIEW.md"

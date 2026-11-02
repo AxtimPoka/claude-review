@@ -1151,8 +1151,8 @@ PR 上之前。
 | 覆寫之前沒有備份 | 沒有做 | 還沒決定 |
 | 讀檔時不檢查資料結構 | `JSON.parse` 的結果直接當成待辦清單 | 還沒決定 |
 | ~~`ci.yml` 這個檔案本身~~ **已處理** | 以前任何人改它都不用經過人 | CODEOWNERS 指向 `@dennisjhao`。範圍不只 workflow：`ci.yml` 只是呼叫 `npm run test`，真正決定它跑什麼的是 `package.json`、`package-lock.json`、`eslint.config.js`、`tsconfig.json`，所以那四個也擁有，加上 `CODEOWNERS` 自己。**兩項都量過了。** 一，`gh api .../codeowners/errors` 回 `{"errors":[]}`，所以語法對、那個人真的有寫入權限（語法寫錯或者人沒權限的時候 GitHub 不報錯，它只是安靜地忽略那一行；查 PR 分支要帶 `ref`，不帶的話查的是 main）。二，PR #18 改 `ci.yml`，`check`、`review`、`security` 三個都綠還是 `BLOCKED`；PR #19 只改 `REVIEW.md`，同樣三個都綠變 `CLEAN`。所以門會擋，而且範圍沒有過寬 |
-| **兩個審查層**都讀 PR 版本的 `REVIEW.md` | `REVIEW.md` 不在那個 action 的保護名單裡，所以兩層讀到的都是 PR 自己那一份。安全掃描的 prompt 指向它（威脅模型）；AI 審核的 prompt 也叫它先讀 `REVIEW.md`（bug 類別、沒有測試守的不變條件、Skip 清單）。所以一個 PR 能做的不只是改寫威脅模型——它可以把 `src/storage.ts` 加進 `## Skip`，或者刪掉一條不變條件，然後兩層都用新規則判它。`CLAUDE.md` 沒有這個問題，因為那個 action 會換成 main 的版本 | 做法已知，但是要做兩邊。安全掃描那邊：`git show origin/main:REVIEW.md`。AI 審核那邊：prompt 改成讀 main 的 `REVIEW.md`，PR 的版本只當成「提議」，跟 `.claude-pr/CLAUDE.md` 那一列同一個做法。只修一邊會讓這張表看起來已經關掉，而比較大的那一半還開著。兩邊都是改 workflow，要 `@dennisjhao` 看。**都還沒做** |
-| CODEOWNERS 刻意不擁有 `REVIEW.md` 和 `CLAUDE.md` | 它們是審查工具的說明書，照同樣的邏輯應該要擁有。但是 main 的 12 個 commit 裡它們各改過 4 次，擁有等於三分之一的 PR 要等第二個人 | 駁回，理由寫進 `CLAUDE.md` 的 Non-goals。`CLAUDE.md` 那一半本來就有保護，所以是真的 non-goal；`REVIEW.md` 那一半是上面那一列的洞 |
+| ~~**兩個審查層**都讀 PR 版本的 `REVIEW.md`~~ **已修** | `REVIEW.md` 不在那個 action 的保護名單裡，所以以前兩層讀到的都是 PR 自己那一份。安全掃描的 prompt 指向它（威脅模型）；AI 審核的 prompt 也叫它先讀 `REVIEW.md`（bug 類別、沒有測試守的不變條件、Skip 清單）。所以一個 PR 能做的不只是改寫威脅模型——它可以把 `src/storage.ts` 加進 `## Skip`，或者刪掉一條不變條件，然後兩層都用新規則判它 | 兩個 workflow 各加一步，在 action 跑之前把工作目錄裡的 `REVIEW.md` 換成 main 的那一份。**prompt 一個字都沒改**，這很重要：文章說審查者的 prompt 一改就要重新用考題評分，而我們還沒有考題（Step 8）。換檔案不是換規則，是換「用誰的規則」；PR 沒改 `REVIEW.md` 的時候兩份一模一樣，所以行為完全不變。PR 提議的那一份還在 `git diff origin/main...HEAD` 裡，審查者看得到那個改動，只是不照它判。**「跟那個 action 自己做的事同一個形狀」——這句話是錯的，而且是審核抓到的。** 它的 `CLAUDE.md` 替換在它自己 checkout **之後**；我的在**之前**。AI 審核那個 action 會再 checkout 一次 PR 的分支，所以換過的檔案只在「兩個 commit 的 blob 一樣」的時候活得下來。修法是把 `actions/checkout` 釘在 `head.sha`，不要用 merge ref，這樣那一次切換是在同一棵樹之間移動。另外兩個 workflow 各加一道事後檢查：掃描或審核跑完之後，比對工作目錄的 `REVIEW.md` 跟 main 的那一份，不一樣就讓工作失敗。**預防 + 偵測**，因為預防靠的是別人的程式碼不改行為。**還沒量的那一種**：main 改過 `REVIEW.md`、而 PR 沒改。那一種要一個從「最後一次改 `REVIEW.md` 之前」分出來的 PR。有了那道事後檢查之後，量它只要開一個那樣的 PR，看 `review` 會不會變紅 |
+| CODEOWNERS 刻意不擁有 `REVIEW.md` 和 `CLAUDE.md` | 它們是審查工具的說明書，照同樣的邏輯應該要擁有。但是 main 的 12 個 commit 裡它們各改過 4 次，擁有等於三分之一的 PR 要等第二個人 | 駁回，理由寫進 `CLAUDE.md` 的 Non-goals。`CLAUDE.md` 那一半本來就有保護；`REVIEW.md` 那一半以前是上面那一列的洞，現在也補了，所以兩半都是真的 non-goal |
 | 整個 repo 的結構性漏洞 | AI 審核只看改動，看不到它 | 需要一個不掛在 PR 上的獨立動作 |
 | 漏掉的問題沒有變成考題 | 沒有地方放，也沒有東西會去跑它 | 還沒決定 |
 | 這份文件寫的 GitHub 規則跟實際設定一不一樣 | 沒有東西在比對。AI 審核讀不到 branch protection 的設定，所以它只能相信作者寫的 | 還沒決定 |
@@ -1191,7 +1191,7 @@ PR 上之前。
 | AI 審核只看改動 | 讀整個 repo 會讓作者每個 PR 都要解釋別人留下的問題。 |
 | 用 GitHub 自己的 token，不裝 Claude App | 少一個要安裝的東西，也少一個「失敗是因為它」的可能。 |
 | 安全掃描釘住 commit 編號 | 那個 action 沒有 tag 也沒有 release，唯一的替代是會變動的分支，而我們把金鑰交給它。 |
-| 掃描的「要找什麼」直接指向 `REVIEW.md` | 威脅模型只有一份。改那個檔案，掃描就跟著變，沒有第二份要同步。代價是它讀的是 PR 那一份，所以 PR 可以改寫自己的威脅模型——見「還沒有人守的東西」。 |
+| 掃描的「要找什麼」直接指向 `REVIEW.md` | 威脅模型只有一份。改那個檔案，掃描就跟著變，沒有第二份要同步。代價本來是它讀 PR 那一份，所以 PR 可以改寫自己的威脅模型。現在工作流程在掃描之前把它換成 main 的那一份，所以只剩「一份威脅模型」這個好處。 |
 | 安全掃描打開「每個 commit 都掃」 | 原本會用快取跳過後續推送，所以只有第一個 commit 被掃過。一個看不到 commit 的閘門不是閘門。 |
 | 拿掉審核工具的編輯工具 | 審一份自己改過的程式，審的不是作者寫的東西。代價是它也不能跑建置了。 |
 | 不砍掉安全層 | 之前提議過，理由是「它報零個」。那個推論錯了：零是它在階段一該有的輸出。 |

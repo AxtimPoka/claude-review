@@ -36,6 +36,37 @@ jobs:
         with:
           fetch-depth: 0
 
+      # REVIEW.md decides what a finding is here: the bug classes, the
+      # invariants no test guards, and the Skip list. This action has no
+      # protected-path mechanism at all, so without this step the scan is
+      # handed the pull request's own copy as its threat model. A pull request
+      # could add src/storage.ts to ## Skip, or delete an invariant, and then
+      # be scanned against the rules it just wrote.
+      #
+      # main's copy wins. The proposed copy is still in
+      # `git diff origin/main...HEAD`, so the change stays reviewable; it just
+      # does not govern this run.
+      #
+      # Not the same shape as the CLAUDE.md swap the AI review's action does for
+      # itself: that one runs after its own checkout. This action does not
+      # check anything out, so a swap before it holds. The guard after the scan
+      # is what makes that assumption loud if it ever stops being true.
+      #
+      # No --depth on the fetch: this checkout is a full clone, and a shallow
+      # fetch would turn it into a shallow one, which the scan's diff against
+      # the base commit needs. Written to a temp path first, because
+      # `> REVIEW.md` truncates before git can fail.
+      - name: Judge against main's REVIEW.md, not the pull request's
+        run: |
+          if [ ! -f REVIEW.md ]; then
+            echo "::error::the pull request has no REVIEW.md"
+            exit 1
+          fi
+          git fetch --no-tags --force origin main:refs/remotes/origin/main
+          git show origin/main:REVIEW.md > "$RUNNER_TEMP/REVIEW.main.md"
+          mv "$RUNNER_TEMP/REVIEW.main.md" REVIEW.md
+          echo "REVIEW.md is now main's copy ($(wc -l < REVIEW.md) lines)"
+
       # The action reads custom-security-scan-instructions as a file path, and
       # silently skips a path that does not exist:
       #
@@ -131,3 +162,18 @@ jobs:
             exit 1
           fi
           echo "the scan ran. findings: $(jq -r '.findings | length' "$RESULTS")"
+
+      # Detection, not prevention. This action does not check anything out
+      # today, so the swap before it holds — but that is an assumption about
+      # someone else's code, pinned by commit and reread only when the pin
+      # moves. If a future version does its own checkout, the scan would be
+      # handed the pull request's own threat model and still report success.
+      # The swap step's log line would still say it worked.
+      - name: The scan must have used main's REVIEW.md
+        run: |
+          if ! git show origin/main:REVIEW.md | diff -q - "$SCAN_INSTRUCTIONS" > /dev/null; then
+            echo "::error::$SCAN_INSTRUCTIONS is not main's copy; the scan used the wrong threat model"
+            git show origin/main:REVIEW.md | diff - "$SCAN_INSTRUCTIONS" | head -20
+            exit 1
+          fi
+          echo "the scan used main's REVIEW.md"

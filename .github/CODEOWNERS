@@ -1,0 +1,49 @@
+# Step 5: the paths that always need a person.
+#
+# The article's rule is that any CI workflow file needs a human regardless of
+# how small the diff is. A one-person repo cannot do that with an approval
+# count, because GitHub will not let you approve your own pull request — so the
+# count stays at 0 and this file carries the rule instead.
+#
+# The scope is deliberately narrow. Every path below changed once, in the
+# initial commit, except the workflows. Being an owner here costs almost no
+# time. Widening it to the whole repo would make every pull request wait.
+
+# --- What CI runs ---
+#
+# CI cannot check itself. The attack is one pull request that disables a check
+# and adds the code that check would have caught. Owning the workflow files
+# alone does not stop it: `ci.yml` only calls `npm run lint|typecheck|test`,
+# and what those commands DO lives elsewhere. All four files below are part of
+# that answer, so all four are owned.
+
+/.github/workflows/ @dennisjhao
+
+# `"test": "true"` is a passing test suite that runs nothing.
+/package.json @dennisjhao
+
+# These can drop the checks without touching a step: an eslint config that
+# ignores `src/`, a tsconfig that excludes it.
+/eslint.config.js @dennisjhao
+/tsconfig.json @dennisjhao
+
+# Which package `eslint` and `vitest` resolve to. REVIEW.md tells reviewers to
+# skip this file, which is the right call for reading a diff and the wrong one
+# for deciding who signs it off.
+/package-lock.json @dennisjhao
+
+# --- This file ---
+#
+# The file that assigns ownership has to be owned, or a pull request deletes it
+# first and changes a workflow second. Same shape as the CLAUDE.md problem: what
+# governs review must not be editable by what is being reviewed.
+
+/.github/CODEOWNERS @dennisjhao
+
+# --- Deliberately NOT owned: REVIEW.md and CLAUDE.md ---
+#
+# They are the reviewer's instructions, so by the logic above they belong here.
+# They are left out because they changed 4 times in this repo's 12 commits,
+# and owning them would make a third of all pull requests wait on someone else.
+# The reason is written into CLAUDE.md's Non-goals, and the uneven protection
+# they already have is recorded in PIPELINE.md.

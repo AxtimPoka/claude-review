@@ -151,3 +151,8 @@ reverting the code does not restore a file.
 - `package-lock.json`
 - `dist/`
 - Formatting and import order. eslint owns those.
+- A count inside a prose paragraph of `PIPELINE.md`. That file is a log, and a
+  sentence like "the fifth time today" is dated the moment it is written;
+  chasing every one of them forever is unbounded. A count inside a **table** is
+  different: a table is read to decide something, so it has to be current, and
+  a stale one there is a finding. The line `| … |` is the test.

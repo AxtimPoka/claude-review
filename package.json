@@ -11,11 +11,13 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "check": "npm run lint && npm run typecheck && npm run test"
+    "check:docs": "node scripts/check-docs.mjs *.md",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run check:docs"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@types/node": "^26.6.5",
+    "commonmark": "^0.31.2",
     "eslint": "^9.37.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0",

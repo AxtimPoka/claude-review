@@ -8,7 +8,7 @@ interesting part, not the app.
 - TypeScript, ESM, Node 22. `module: NodeNext`, so relative imports end in `.js`.
 - vitest for tests, eslint (flat config) for lint.
 - `npm run check` = lint + typecheck + test + docs.
-- CI runs the same four, but as four separate steps, so one failure does not
+- CI runs the same gates, but as separate steps, so one failure does not
   hide the others. The list therefore lives in two places, and **`ci.yml` is
   the one that decides what gates a pull request**: a gate chained into `check`
   and not listed there runs on laptops only. That is how the docs gate shipped

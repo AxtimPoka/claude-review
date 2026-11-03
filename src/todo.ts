@@ -15,6 +15,13 @@ export function pendingTodos(todos: Todo[]): Todo[] {
   return todos.filter((todo) => !todo.done);
 }
 
+export function completeAll(todos: Todo[]): Todo[] {
+  for (const todo of todos) {
+    todo.done = true;
+  }
+  return todos;
+}
+
 export function completeTodo(todos: Todo[], id: number): Todo[] {
   if (!Number.isInteger(id) || id < 1 || id > todos.length) {
     throw new Error(`no todo with id ${id}`);

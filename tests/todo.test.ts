@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addTodo, completeTodo, pendingTodos } from '../src/todo.js';
+import { addTodo, completeAll, completeTodo, pendingTodos } from '../src/todo.js';
 
 describe('addTodo', () => {
   it('appends a todo that is not done yet', () => {
@@ -47,5 +47,12 @@ describe('completeTodo', () => {
 
   it('rejects an id that does not exist', () => {
     expect(() => completeTodo([], 1)).toThrow(/no todo/);
+  });
+});
+
+describe('completeAll', () => {
+  it('marks every todo done', () => {
+    const todos = addTodo(addTodo([], 'a'), 'b');
+    expect(completeAll(todos).every((todo) => todo.done)).toBe(true);
   });
 });

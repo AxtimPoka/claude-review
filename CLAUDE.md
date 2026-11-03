@@ -22,6 +22,10 @@ interesting part, not the app.
 ## Conventions
 
 - Functions in `todo.ts` take a list and return a new list. Never mutate.
+  This one is checked, not just written down: `Todo`'s fields are `readonly`
+  and the parameters are `readonly Todo[]`, so `tsc` refuses field
+  assignment, `push`, `splice` and index assignment. Return types stay
+  `Todo[]`, because each body builds a fresh array.
 - The library throws; `cli.ts` catches and turns errors into exit codes.
 - Strict TypeScript, including `noUncheckedIndexedAccess`. No `any`.
 

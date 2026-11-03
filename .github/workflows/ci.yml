@@ -18,7 +18,7 @@ jobs:
 
       - run: npm ci
 
-      # The three gates run as separate steps, and each one runs even if an
+      # The gates run as separate steps, and each one runs even if an
       # earlier one failed. `npm run check` chains them with &&, which would
       # hide the test results behind a lint error and cost the author a second
       # round trip to learn about them.

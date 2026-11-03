@@ -1,6 +1,12 @@
+/**
+ * Readonly on purpose. CLAUDE.md's convention is that `todo.ts` takes a list
+ * and returns a new one, never mutating. Until now that was prose only: the
+ * compiler was happy to let any caller assign to a field. This makes the
+ * convention something `tsc` can refuse.
+ */
 export interface Todo {
-  title: string;
-  done: boolean;
+  readonly title: string;
+  readonly done: boolean;
 }
 
 export function addTodo(todos: Todo[], title: string): Todo[] {

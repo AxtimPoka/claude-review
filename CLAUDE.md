@@ -7,7 +7,12 @@ interesting part, not the app.
 
 - TypeScript, ESM, Node 22. `module: NodeNext`, so relative imports end in `.js`.
 - vitest for tests, eslint (flat config) for lint.
-- `npm run check` = lint + typecheck + test. CI runs exactly this.
+- `npm run check` = lint + typecheck + test + docs. CI runs exactly this.
+- The docs step is `scripts/check-docs.mjs`. Every rule in it is a mistake this
+  repo made in a pull request, and `tests/check-docs.test.ts` holds one case
+  per mistake, so a rule that stops working fails the build. It renders the
+  markdown with `commonmark` rather than guessing: the hand-written first
+  version reported 28 problems in files that render cleanly.
 
 ## Layout
 

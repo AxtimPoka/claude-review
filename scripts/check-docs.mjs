@@ -2,7 +2,9 @@
 //
 // Every rule exists because the mistake it catches actually happened, was
 // caught by a human or by the AI review, and then happened again. Each cites
-// the pull request it came from. Step 8 in PIPELINE.md is the argument for why
+// the pull request it came from. Rules are named, not numbered: two different
+// checks once shared the number 1, which let a test pass on either of them and
+// hid the fact that deleting one half changed nothing (#28). Step 8 in PIPELINE.md is the argument for why
 // a recorded lesson is worth less than a rule that runs.
 //
 // The emphasis and heading rules render the document instead of guessing. The
@@ -64,7 +66,7 @@ export function checkDocument(path, text) {
   const rs = rows(text);
   const report = (rule, line, message) => problems.push({ path, line, rule, message });
 
-  // Rule 4 (#20, #26): does a `**` written in prose survive rendering? CJK text
+  // literal-bold (#20, #26): does a `**` written in prose survive rendering? CJK text
   // fails this constantly, because `。` and `：` are punctuation and CommonMark
   // will not pair a run across them. Fenced blocks are skipped and code spans
   // become a placeholder word first -- see the note at the top for why. The
@@ -76,38 +78,39 @@ export function checkDocument(path, text) {
     const md = c.lines.join('\n').replace(/`[^`]*`/g, 'X');
     if (!md.includes('**')) continue;
     if (render(md).includes('**')) {
-      report(4, c.start, 'a `**` here does not render as bold; it stays literal');
+      report('literal-bold', c.start, 'a `**` here does not render as bold; it stays literal');
     }
   }
 
-  // Rule 1 (#27): a `---` or `===` directly under a non-blank line is a setext
-  // heading, not a rule. The paragraph above it silently becomes a heading.
+  // setext-rule (#27): a `---` or `===` directly under a non-blank line is a
+  // setext heading, not a rule. The paragraph above silently becomes a heading.
   rs.forEach(({ line, inFence }, i) => {
     if (inFence || i === 0) return;
     if (!/^(-{3,}|={3,})\s*$/.test(line)) return;
     const prev = rs[i - 1];
     if (prev.line.trim() !== '' && !prev.inFence) {
-      report(1, i + 1, 'a rule directly under text is a setext heading, not a rule');
+      report('setext-rule', i + 1, 'a rule directly under text is a setext heading, not a rule');
     }
   });
 
-  // Rule 1, from the other side: if the renderer produces more headings than
-  // the source asks for, something became one. The text rule above locates the
-  // usual cause; this catches a cause nobody has thought of yet.
+  // heading-count, the same bug from the other side: if the renderer produces a
+  // different number of headings than the source asks for, something became one.
+  // setext-rule locates the known cause; this catches a cause nobody has thought
+  // of yet. They are separate names on purpose, so a test can tell them apart.
   const asked = rs.filter((r) => !r.inFence && /^#{1,6} /.test(r.line)).length;
   const got = (render(text).match(/<h[1-6][ >]/g) ?? []).length;
   if (got !== asked) {
-    report(1, 1, `source asks for ${asked} headings, the renderer produced ${got}`);
+    report('heading-count', 1, `source asks for ${asked} headings, the renderer produced ${got}`);
   }
 
-  // Rule 5 (#26): two rules within two lines render as two separators.
+  // double-rule (#26): two rules within two lines render as two separators.
   const hr = rs.map(({ line, inFence }, i) => (!inFence && /^-{3,}\s*$/.test(line) ? i : -1))
     .filter((i) => i >= 0);
   hr.forEach((i, k) => {
-    if (k > 0 && i - hr[k - 1] <= 2) report(5, i + 1, 'two rules in a row');
+    if (k > 0 && i - hr[k - 1] <= 2) report('double-rule', i + 1, 'two rules in a row');
   });
 
-  // Rule 6 (#26): in a file that separates its `##` sections with a rule,
+  // missing-rule (#26): in a file that separates its `##` sections with a rule,
   // every later section must have one. Only checked where the file already
   // uses the convention: asserting it on a file that does not is a false
   // alarm, and that is the mistake this whole file was rewritten to avoid.
@@ -117,7 +120,7 @@ export function checkDocument(path, text) {
     heads.slice(1).forEach((i) => {
       const above = rs.slice(Math.max(0, i - 3), i).filter((r) => r.line.trim() !== '');
       if (above.length === 0 || above[above.length - 1].line.trim() !== '---') {
-        report(6, i + 1, 'section heading with no rule before it');
+        report('missing-rule', i + 1, 'section heading with no rule before it');
       }
     });
   }
@@ -128,7 +131,7 @@ export function checkDocument(path, text) {
 const files = process.argv.slice(2);
 if (files.length > 0) {
   const all = files.flatMap((f) => checkDocument(f, readFileSync(f, 'utf8')));
-  for (const p of all) console.error(`${p.path}:${p.line}  rule ${p.rule}: ${p.message}`);
+  for (const p of all) console.error(`${p.path}:${p.line}  ${p.rule}: ${p.message}`);
   console.log(all.length === 0
     ? `checked ${files.length} document(s), no problems`
     : `${all.length} problem(s) in ${files.length} document(s)`);

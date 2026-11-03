@@ -11,3 +11,5 @@ node dist/cli.js list
 ```
 
 `npm run check` runs lint, typecheck and tests — the same three things CI runs.
+
+<!-- probe: throwaway, measures whether a behind-main branch is blocked. Will be closed. -->
